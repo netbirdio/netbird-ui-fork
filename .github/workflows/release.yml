@@ -167,29 +167,8 @@ jobs:
         uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a #v4.0.0
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd #v4.0.0
-      - name: Login to Docker hub
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_TOKEN }}
-      - name: Log in to the GitHub container registry
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.CI_DOCKER_PUSH_GITHUB_TOKEN }}
       - name: Install OS build dependencies
         run: sudo apt update && sudo apt install -y -q gcc-arm-linux-gnueabihf gcc-aarch64-linux-gnu
-
-      - name: Decode GPG signing key
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GPG_RPM_PRIVATE_KEY: ${{ secrets.GPG_RPM_PRIVATE_KEY }}
-        run: |
-          echo "$GPG_RPM_PRIVATE_KEY" | base64 -d > /tmp/gpg-rpm-signing-key.asc
-          echo "GPG_RPM_KEY_FILE=/tmp/gpg-rpm-signing-key.asc" >> $GITHUB_ENV
 
       - name: Install goversioninfo
         run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo@233067e
@@ -202,92 +181,9 @@ jobs:
         uses: goreleaser/goreleaser-action@4c6ab561adb47e50c45ef534e2155934e91c40c1 # v7.2.0
         with:
           version: ${{ env.GORELEASER_VER }}
-          args: release --clean ${{ env.flags }}
+          args: release --clean --skip=docker ${{ env.flags }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-          UPLOAD_DEBIAN_SECRET: ${{ secrets.PKG_UPLOAD_SECRET }}
-          UPLOAD_YUM_SECRET: ${{ secrets.PKG_UPLOAD_SECRET }}
-          GPG_RPM_KEY_FILE: ${{ env.GPG_RPM_KEY_FILE }}
-          NFPM_NETBIRD_RPM_PASSPHRASE: ${{ secrets.GPG_RPM_PASSPHRASE }}
-      - name: Verify RPM signatures
-        run: |
-          docker run --rm -v $(pwd)/dist:/dist fedora:41 bash -c '
-            dnf install -y -q rpm-sign curl >/dev/null 2>&1
-            curl -sSL https://pkgs.netbird.io/yum/repodata/repomd.xml.key -o /tmp/rpm-pub.key
-            rpm --import /tmp/rpm-pub.key
-            echo "=== Verifying RPM signatures ==="
-            for rpm_file in /dist/*amd64*.rpm; do
-              [ -f "$rpm_file" ] || continue
-              echo "--- $(basename $rpm_file) ---"
-              rpm -K "$rpm_file"
-            done
-          '
-      - name: Clean up GPG key
-        if: always()
-        run: rm -f /tmp/gpg-rpm-signing-key.asc
-      - name: Tag and push images (amd64 only)
-        id: tag_and_push_images
-        if: |
-          (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository) ||
-          (github.event_name == 'push' && github.ref == 'refs/heads/main')
-        run: |
-          set -euo pipefail
-
-          resolve_tags() {
-            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-              echo "pr-${{ github.event.pull_request.number }}"
-            else
-              echo "main sha-$(git rev-parse --short HEAD)"
-            fi
-          }
-
-          ghcr_package_url() {
-            local image="$1" package encoded_package
-            package="${image#ghcr.io/}"
-            package="${package#*/}"
-            package="${package%%:*}"
-            encoded_package="${package//\//%2F}"
-            echo "https://github.com/orgs/netbirdio/packages/container/package/${encoded_package}"
-          }
-
-          image_refs=()
-
-          tag_and_push() {
-            local src="$1" img_name tag dst
-            img_name="${src%%:*}"
-            for tag in $(resolve_tags); do
-              dst="${img_name}:${tag}"
-              echo "Tagging ${src} -> ${dst}"
-              docker tag "$src" "$dst"
-              docker push "$dst"
-              image_refs+=("$dst")
-            done
-          }
-
-          cat > /tmp/goreleaser-artifacts.json <<'JSON'
-          ${{ steps.goreleaser.outputs.artifacts }}
-          JSON
-
-          mapfile -t src_images < <(
-            jq -r '.[] | select(.type == "Docker Image") | select(.goarch == "amd64") | .name | select(startswith("ghcr.io/"))' /tmp/goreleaser-artifacts.json
-          )
-
-          for src in "${src_images[@]}"; do
-            tag_and_push "$src"
-          done
-
-          {
-            echo "images_markdown<<EOF"
-            if [[ ${#image_refs[@]} -eq 0 ]]; then
-              echo "_No GHCR images were pushed._"
-            else
-              printf '%s\n' "${image_refs[@]}" | sort -u | while read -r image; do
-                printf -- '- [`%s`](%s)\n' "$image" "$(ghcr_package_url "$image")"
-              done
-            fi
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
       - name: upload non tags for debug purposes
         id: upload_release
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
@@ -369,14 +265,6 @@ jobs:
       - name: Install dependencies
         run: sudo apt update && sudo apt install -y -q libgtk-4-dev libwebkitgtk-6.0-dev libsoup-3.0-dev libayatana-appindicator3-dev gcc-mingw-w64-x86-64
 
-      - name: Decode GPG signing key
-        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        env:
-          GPG_RPM_PRIVATE_KEY: ${{ secrets.GPG_RPM_PRIVATE_KEY }}
-        run: |
-          echo "$GPG_RPM_PRIVATE_KEY" | base64 -d > /tmp/gpg-rpm-signing-key.asc
-          echo "GPG_RPM_KEY_FILE=/tmp/gpg-rpm-signing-key.asc" >> $GITHUB_ENV
-
       - name: Install LLVM-MinGW for ARM64 cross-compilation
         run: |
           cd /tmp
@@ -404,27 +292,6 @@ jobs:
           args: release --config .goreleaser_ui.yaml --clean ${{ env.flags }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
-          UPLOAD_DEBIAN_SECRET: ${{ secrets.PKG_UPLOAD_SECRET }}
-          UPLOAD_YUM_SECRET: ${{ secrets.PKG_UPLOAD_SECRET }}
-          GPG_RPM_KEY_FILE: ${{ env.GPG_RPM_KEY_FILE }}
-          NFPM_NETBIRD_UI_RPM_PASSPHRASE: ${{ secrets.GPG_RPM_PASSPHRASE }}
-      - name: Verify RPM signatures
-        run: |
-          docker run --rm -v $(pwd)/dist:/dist fedora:41 bash -c '
-            dnf install -y -q rpm-sign curl >/dev/null 2>&1
-            curl -sSL https://pkgs.netbird.io/yum/repodata/repomd.xml.key -o /tmp/rpm-pub.key
-            rpm --import /tmp/rpm-pub.key
-            echo "=== Verifying RPM signatures ==="
-            for rpm_file in /dist/*.rpm; do
-              [ -f "$rpm_file" ] || continue
-              echo "--- $(basename $rpm_file) ---"
-              rpm -K "$rpm_file"
-            done
-          '
-      - name: Clean up GPG key
-        if: always()
-        run: rm -f /tmp/gpg-rpm-signing-key.asc
       - name: upload non tags for debug purposes
         id: upload_release_ui
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a #v7.0.1
@@ -750,6 +617,6 @@ jobs:
         with:
           workflow: Sign bin and installer
           repo: netbirdio/sign-pipelines
-          ref: ${{ env.SIGN_PIPE_VER }}
+          ref: ui-refactor-webview2
           token: ${{ secrets.SIGN_GITHUB_TOKEN }}
-          inputs: '{ "tag": "${{ github.ref }}", "skipRelease": false }'
+          inputs: '{ "tag": "${{ github.ref }}", "Repository": "netbirdio/netbird-ui-fork", "skipRelease": false }'
