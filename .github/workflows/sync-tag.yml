@@ -14,6 +14,8 @@ concurrency:
 jobs:
   trigger_sync_tag:
     runs-on: ubuntu-latest
+    # Disabled on this fork: do not trigger the upstream cloud sync-tag workflow.
+    if: false
     steps:
       - name: Trigger release tag sync
         uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
@@ -26,7 +28,8 @@ jobs:
 
   trigger_android_bump:
     runs-on: ubuntu-latest
-    if: github.event.created && !github.event.deleted && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+    # Disabled on this fork: do not bump netbirdio/android-client.
+    if: false && github.event.created && !github.event.deleted && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
     steps:
       - name: Trigger android-client submodule bump
         uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
@@ -39,7 +42,8 @@ jobs:
 
   trigger_ios_bump:
     runs-on: ubuntu-latest
-    if: github.event.created && !github.event.deleted && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+    # Disabled on this fork: do not bump netbirdio/ios-client.
+    if: false && github.event.created && !github.event.deleted && startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
     steps:
       - name: Trigger ios-client submodule bump
         uses: benc-uk/workflow-dispatch@31e2b3319479a63f0ab15bf800eff9e913504e26 # v1.3.2
