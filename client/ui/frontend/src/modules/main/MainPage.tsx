@@ -11,11 +11,9 @@ import { Peers } from "@/modules/main/advanced/peers/Peers";
 import { Networks } from "@/modules/main/advanced/networks/Networks";
 import { ExitNodes } from "@/modules/main/advanced/exit-nodes/ExitNodes";
 import { NetworksProvider } from "@/contexts/NetworksContext";
-import {
-    PeerDetailProvider,
-    usePeerDetail,
-} from "@/contexts/PeerDetailContext";
+import { PeerDetailProvider, usePeerDetail } from "@/contexts/PeerDetailContext";
 import { PeerDetailPanel } from "@/modules/main/advanced/peers/PeerDetailPanel";
+import {isWindows} from "@/lib/platform.ts";
 
 export const MainPage = () => {
     return (
@@ -35,10 +33,11 @@ const MainBody = () => {
     const isAdvanced = viewMode === "advanced";
 
     return (
-        <div className={"wails-draggable flex flex-1 min-h-0 gap-4r"}>
-            <div
-                className={"flex flex-col items-center shrink-0 w-[364px]"}
-            >
+        <div className={"wails-draggable flex flex-1 min-h-0"}>
+            {/* Windows gets a narrower width to compensate for the OS window frame/border that Wails
+                counts differently than macOS, so the visible content area lines up on both platforms.
+                See https://github.com/wailsapp/wails/issues/3260 */}
+            <div className={cn("flex flex-col items-center shrink-0 ", isWindows() ? "w-[364px]" : "w-[380px]")}>
                 <MainConnectionStatusSwitch />
             </div>
             {isAdvanced && (
@@ -57,10 +56,7 @@ const AdvancedAppRightPanel = () => {
     const isConnected = status?.status === "Connected";
 
     return (
-        <AppRightPanel
-            overlay={<PeerDetailPanel />}
-            overlayOpen={selected !== null}
-        >
+        <AppRightPanel overlay={<PeerDetailPanel />} overlayOpen={selected !== null}>
             <div
                 className={cn(
                     "flex-1 min-h-0 min-w-0 flex flex-col",
@@ -76,11 +72,7 @@ const AdvancedAppRightPanel = () => {
                 </div>
             </div>
             {!isConnected && (
-                <div
-                    className={
-                        "absolute inset-0 z-20 flex pointer-events-auto bg-nb-gray-940"
-                    }
-                >
+                <div className={"absolute inset-0 z-20 flex pointer-events-auto bg-nb-gray-940"}>
                     <NotConnectedState />
                 </div>
             )}
