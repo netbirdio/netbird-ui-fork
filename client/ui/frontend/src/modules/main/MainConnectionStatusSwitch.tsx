@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Dialogs, Events } from "@wailsio/runtime";
+import { Events } from "@wailsio/runtime";
 import { Connection, WindowManager } from "@bindings/services";
 import i18next from "@/lib/i18n";
+import { errorDialog } from "@/lib/dialogs.ts";
 import { ToggleSwitch } from "@/components/switches/ToggleSwitch.tsx";
 import { useStatus } from "@/contexts/StatusContext.tsx";
 import { useProfile } from "@/contexts/ProfileContext.tsx";
@@ -31,6 +32,10 @@ const EVENT_BROWSER_LOGIN_CANCEL = "browser-login:cancel";
 const EVENT_TRIGGER_LOGIN = "trigger-login";
 
 const NEEDS_LOGIN_STATES = new Set(["NeedsLogin", "SessionExpired", "LoginFailed"]);
+
+// Re-enable the switch after this long in a transitioning state so the user
+// can force a Connection.Down on a stuck Connecting/Disconnecting flow.
+const FORCE_TOGGLE_DELAY_MS = 7000;
 
 const errorMessage = formatErrorMessage;
 
@@ -105,7 +110,7 @@ async function startLogin(): Promise<void> {
     } catch (e) {
         WindowManager.CloseBrowserLogin().catch(console.error);
         if (cancelled) return;
-        await Dialogs.Error({
+        await errorDialog({
             Title: i18next.t("connect.error.loginTitle"),
             Message: errorMessage(e),
         });
@@ -192,7 +197,7 @@ export const MainConnectionStatusSwitch = () => {
         } catch (e) {
             setAction(null);
             await refresh();
-            await Dialogs.Error({
+            await errorDialog({
                 Title: t("connect.error.connectTitle"),
                 Message: errorMessage(e),
             });
@@ -212,7 +217,7 @@ export const MainConnectionStatusSwitch = () => {
         } catch (e) {
             setAction(null);
             await refresh();
-            await Dialogs.Error({
+            await errorDialog({
                 Title: t("connect.error.disconnectTitle"),
                 Message: errorMessage(e),
             });
@@ -280,7 +285,12 @@ export const MainConnectionStatusSwitch = () => {
     }, [driveLogin]);
 
     const handleSwitch = (next: boolean) => {
-        if (unreachable || action !== null) return;
+        if (unreachable) return;
+        if (isTransitioning) {
+            if (canForceCancel) void forceCancel();
+            return;
+        }
+        if (action !== null) return;
         if (needsLogin) {
             driveLogin();
             return;
@@ -296,6 +306,38 @@ export const MainConnectionStatusSwitch = () => {
         connState === ConnectionState.Connecting || connState === ConnectionState.Disconnecting;
     const isOn =
         connState === ConnectionState.Connected || connState === ConnectionState.Connecting;
+
+    // When the daemon hangs in Connecting/Disconnecting, give the user an
+    // escape hatch: after the delay, the switch becomes clickable again so a
+    // tap fires Connection.Down (plus cancels any in-flight SSO flow).
+    const [canForceCancel, setCanForceCancel] = useState(false);
+    useEffect(() => {
+        if (!isTransitioning) {
+            setCanForceCancel(false);
+            return;
+        }
+        const id = setTimeout(() => setCanForceCancel(true), FORCE_TOGGLE_DELAY_MS);
+        return () => clearTimeout(id);
+    }, [isTransitioning]);
+
+    const forceCancel = async () => {
+        if (action === "logging-in") {
+            void Events.Emit(EVENT_BROWSER_LOGIN_CANCEL);
+        }
+        WindowManager.CloseBrowserLogin().catch(() => {});
+        setAction("disconnect");
+        try {
+            await Connection.Down();
+            await refresh();
+        } catch (e) {
+            setAction(null);
+            await refresh();
+            await errorDialog({
+                Title: t("connect.error.disconnectTitle"),
+                Message: errorMessage(e),
+            });
+        }
+    };
     const showLocal = connState === ConnectionState.Connected;
     const fqdn = status?.local.fqdn || "";
     const ip = status?.local.ip || "";
@@ -313,7 +355,7 @@ export const MainConnectionStatusSwitch = () => {
                 size={"large"}
                 checked={isOn}
                 onCheckedChange={handleSwitch}
-                disabled={isTransitioning || unreachable}
+                disabled={(isTransitioning && !canForceCancel) || unreachable}
                 className={cn(unreachable && "opacity-80", isTransitioning && "animate-pulse")}
             />
 

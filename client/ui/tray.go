@@ -4,6 +4,7 @@ package main
 
 import (
 	"context"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -75,6 +76,12 @@ type Tray struct {
 	tray   *application.SystemTray
 	window *application.WebviewWindow
 	svc    TrayServices
+	// panelDark reports whether the desktop panel uses a dark colour
+	// scheme, so iconForState can pick the black vs white monochrome tray
+	// icon on Linux. Set by startTrayTheme (Linux only); nil on macOS and
+	// Windows, where the OS/Wails handles light-vs-dark icon selection and
+	// panelIsDark falls back to its default.
+	panelDark func() bool
 	// loc owns the active language plus the preference subscription. The
 	// tray talks to it for every translated label (t.loc.T(...)) and
 	// registers a callback in NewTray that re-renders the menu on a
@@ -191,8 +198,21 @@ func NewTray(app *application.App, window *application.WebviewWindow, svc TraySe
 	}
 	t.updater = newTrayUpdater(app, window, svc.Update, svc.Notifier, t.loc, func() { t.applyIcon() })
 	t.tray = app.SystemTray.New()
+	// Seed panel-theme detection (Linux only) before the first paint so the
+	// initial icon already matches the panel's light/dark scheme; repaints
+	// on live theme switches.
+	t.startTrayTheme()
 	t.applyIcon()
 	t.tray.SetTooltip(t.loc.T("tray.tooltip"))
+	// On Linux the SNI hover tooltip is sourced from the systray *Label*
+	// (the StatusNotifierItem Title/ToolTip props), not SetTooltip —
+	// SetTooltip is a no-op on Linux. With no label set, Wails falls back
+	// to the literal "Wails", so set it explicitly here. macOS is skipped
+	// because its setLabel paints visible text next to the icon; Windows
+	// is skipped because its tooltip comes from SetTooltip above.
+	if runtime.GOOS == "linux" {
+		t.tray.SetLabel(t.loc.T("tray.tooltip"))
+	}
 	t.menu = t.buildMenu()
 	t.tray.SetMenu(t.menu)
 	// Left-click on the tray icon opens the menu, and the window is reached
@@ -284,6 +304,11 @@ func (t *Tray) ShowWindow() {
 // rebuild.
 func (t *Tray) applyLanguage() {
 	t.tray.SetTooltip(t.loc.T("tray.tooltip"))
+	// Mirror the Linux label fix from NewTray — the SNI hover tooltip
+	// rides on the label, so refresh it on language change too.
+	if runtime.GOOS == "linux" {
+		t.tray.SetLabel(t.loc.T("tray.tooltip"))
+	}
 	t.menu = t.buildMenu()
 	t.tray.SetMenu(t.menu)
 	t.reapplyMenuState()
@@ -459,7 +484,7 @@ func (t *Tray) buildMenu() *application.Menu {
 		SetAccelerator("CmdOrCtrl+,").
 		OnClick(func(*application.Context) { t.svc.WindowManager.OpenSettings("") })
 
-	aboutLabel := t.loc.T("tray.menu.about")
+	aboutLabel := menuLabel(t.loc.T("tray.menu.about"))
 	about := menu.AddSubmenu(aboutLabel)
 	about.Add(t.loc.T("tray.menu.github")).OnClick(func(*application.Context) {
 		_ = t.app.Browser.OpenURL(urlGitHubRepo)

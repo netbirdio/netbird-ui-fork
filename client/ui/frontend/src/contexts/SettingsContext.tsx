@@ -7,8 +7,8 @@ import {
     useState,
     type ReactNode,
 } from "react";
-import { Dialogs } from "@wailsio/runtime";
-import { Settings as SettingsSvc } from "@bindings/services";
+import { errorDialog } from "@/lib/dialogs.ts";
+import { Autostart, Settings as SettingsSvc, Version } from "@bindings/services";
 import type { Config } from "@bindings/services/models.js";
 import i18next from "@/lib/i18n";
 import { useProfile } from "@/contexts/ProfileContext.tsx";
@@ -17,15 +17,24 @@ import { formatErrorMessage as errorMessage } from "@/lib/errors.ts";
 
 const SAVE_DEBOUNCE_MS = 400;
 
+export type AutostartState = { supported: boolean; enabled: boolean };
+
 type SettingsContextValue = {
     config: Config;
+    guiVersion: string;
     setField: <K extends keyof Config>(k: K, v: Config[K]) => void;
     saveField: <K extends keyof Config>(k: K, v: Config[K]) => Promise<void>;
     saveFields: (partial: Partial<Config>) => Promise<void>;
     saveNow: () => Promise<void>;
 };
 
+type AutostartContextValue = {
+    autostart: AutostartState | null;
+    setAutostartEnabled: (enabled: boolean) => Promise<void>;
+};
+
 const SettingsContext = createContext<SettingsContextValue | null>(null);
+const AutostartContext = createContext<AutostartContextValue | null>(null);
 
 export const useSettings = () => {
     const ctx = useContext(SettingsContext);
@@ -35,9 +44,20 @@ export const useSettings = () => {
     return ctx;
 };
 
+export const useAutostartSetting = () => {
+    const ctx = useContext(AutostartContext);
+    if (!ctx) {
+        throw new Error(
+            "useAutostartSetting must be used inside AutostartSettingsProvider",
+        );
+    }
+    return ctx;
+};
+
 const useSettingsState = () => {
     const { username, activeProfile, loaded: profileLoaded } = useProfile();
     const [config, setConfig] = useState<Config | null>(null);
+    const [guiVersion, setGuiVersion] = useState<string>("—");
     const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
@@ -50,13 +70,23 @@ const useSettingsState = () => {
                 });
                 setConfig(c);
             } catch (e) {
-                await Dialogs.Error({
+                await errorDialog({
                     Title: i18next.t("settings.error.loadTitle"),
                     Message: errorMessage(e),
                 });
             }
         })();
     }, [profileLoaded, activeProfile, username]);
+
+    useEffect(() => {
+        let cancelled = false;
+        Version.GUI().then((v) => {
+            if (!cancelled) setGuiVersion(v);
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(
         () => () => {
@@ -80,7 +110,7 @@ const useSettingsState = () => {
                     username,
                 });
             } catch (e) {
-                await Dialogs.Error({
+                await errorDialog({
                     Title: i18next.t("settings.error.saveTitle"),
                     Message: errorMessage(e),
                 });
@@ -141,11 +171,12 @@ const useSettingsState = () => {
         [config, save],
     );
 
-    return { config, setField, saveField, saveFields, saveNow };
+    return { config, guiVersion, setField, saveField, saveFields, saveNow };
 };
 
 export const SettingsProvider = ({ children }: { children: ReactNode }) => {
-    const { config, setField, saveField, saveFields, saveNow } = useSettingsState();
+    const { config, guiVersion, setField, saveField, saveFields, saveNow } =
+        useSettingsState();
 
     return (
         <div className={"flex-1 min-h-0 overflow-y-auto"}>
@@ -155,6 +186,7 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
                 <SettingsContext.Provider
                     value={{
                         config,
+                        guiVersion,
                         setField,
                         saveField,
                         saveFields,
@@ -165,5 +197,44 @@ export const SettingsProvider = ({ children }: { children: ReactNode }) => {
                 </SettingsContext.Provider>
             )}
         </div>
+    );
+};
+
+export const AutostartSettingsProvider = ({ children }: { children: ReactNode }) => {
+    const [autostart, setAutostart] = useState<AutostartState | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const supported = await Autostart.Supported();
+            const enabled = supported ? await Autostart.IsEnabled() : false;
+            if (cancelled) return;
+            setAutostart({ supported, enabled });
+        })().catch(() => {
+            if (cancelled) return;
+            setAutostart({ supported: false, enabled: false });
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    const setAutostartEnabled = useCallback(async (enabled: boolean) => {
+        setAutostart((s) => (s ? { ...s, enabled } : s));
+        try {
+            await Autostart.SetEnabled(enabled);
+        } catch (e) {
+            setAutostart((s) => (s ? { ...s, enabled: !enabled } : s));
+            await errorDialog({
+                Title: i18next.t("settings.general.autostart.errorTitle"),
+                Message: errorMessage(e),
+            });
+        }
+    }, []);
+
+    return (
+        <AutostartContext.Provider value={{ autostart, setAutostartEnabled }}>
+            {children}
+        </AutostartContext.Provider>
     );
 };
