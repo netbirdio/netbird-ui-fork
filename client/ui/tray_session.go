@@ -60,19 +60,22 @@ func (t *Tray) applySessionExpiry(deadline *time.Time, connected bool) {
 		d = *deadline
 	}
 
-	switch {
-	case deadline == nil:
-		log.Infof("tray applySessionExpiry: deadline=<nil> connected=%v → row hidden", connected)
-	case deadline.IsZero():
-		log.Infof("tray applySessionExpiry: deadline=<zero> connected=%v → row hidden", connected)
-	default:
-		log.Infof("tray applySessionExpiry: deadline=%s (in %s) connected=%v",
-			deadline.Format(time.RFC3339), time.Until(*deadline), connected)
-	}
-
 	t.sessionMu.Lock()
+	changed := !t.sessionExpiresAt.Equal(d)
 	t.sessionExpiresAt = d
 	t.sessionMu.Unlock()
+
+	if changed {
+		switch {
+		case deadline == nil:
+			log.Infof("tray applySessionExpiry: deadline=<nil> connected=%v → row hidden", connected)
+		case deadline.IsZero():
+			log.Infof("tray applySessionExpiry: deadline=<zero> connected=%v → row hidden", connected)
+		default:
+			log.Infof("tray applySessionExpiry: deadline=%s (in %s) connected=%v",
+				deadline.Format(time.RFC3339), time.Until(*deadline), connected)
+		}
+	}
 
 	if t.sessionExpiresItem == nil {
 		return
@@ -131,13 +134,13 @@ func (t *Tray) formatSessionRemaining(d time.Duration) string {
 		}
 		return t.loc.T("tray.session.unit.minutes", "count", strconv.Itoa(m))
 	case d < 24*time.Hour:
-		h := int(d / time.Hour)
+		h := int((d + 30*time.Minute) / time.Hour)
 		if h == 1 {
 			return t.loc.T("tray.session.unit.hour")
 		}
 		return t.loc.T("tray.session.unit.hours", "count", strconv.Itoa(h))
 	default:
-		days := int(d / (24 * time.Hour))
+		days := int((d + 12*time.Hour) / (24 * time.Hour))
 		if days == 1 {
 			return t.loc.T("tray.session.unit.day")
 		}
