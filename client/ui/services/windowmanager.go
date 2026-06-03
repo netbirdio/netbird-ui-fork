@@ -45,6 +45,10 @@ const EventSettingsOpen = "netbird:settings:open"
 // at #181A1D / nb-gray-950, used by AppLayout's <html> background).
 var WindowBackgroundColour = application.NewRGB(24, 26, 29)
 
+// WindowHeight is the shared frame height for the main window and the
+// Settings window so the right panel inside both ends up the same size.
+const WindowHeight = 660
+
 // Wails reads CustomTheme colours as 0x00BBGGRR (RGB byte order reversed).
 // Border + title bar match AppRightPanel's bg-nb-gray-940 (#1C1E21);
 // title text matches text-nb-gray-100 (#E4E7E9). u32ptr exists only
@@ -150,6 +154,7 @@ type WindowManager struct {
 	sessionExpired       *application.WebviewWindow
 	sessionAboutToExpire *application.WebviewWindow
 	installProgress      *application.WebviewWindow
+	welcome              *application.WebviewWindow
 	// hiddenForLogin remembers windows that were visible when the
 	// BrowserLogin popup opened. They were Hide()n to keep focus on the
 	// SSO flow without resorting to AlwaysOnTop, and are restored when
@@ -188,11 +193,31 @@ func (s *WindowManager) title(key string) string {
 // at click time.
 func NewWindowManager(app *application.App, mainWindow *application.WebviewWindow, translator ErrorTranslator, prefs LanguagePreference, linuxIcon []byte) *WindowManager {
 	s := &WindowManager{app: app, mainWindow: mainWindow, translator: translator, prefs: prefs, linuxIcon: linuxIcon}
+	// If the prefs implementation also exposes Subscribe (the runtime
+	// *preferences.Store does), wire up a goroutine that re-titles every
+	// live auxiliary window on language flip. Done here — instead of via
+	// an exported WatchLanguage method on the service — so the Wails
+	// binding generator doesn't try to expose a LanguageSubscriber-taking
+	// method to the frontend (interface params can't round-trip through
+	// JSON and would emit a generator warning).
+	if sub, ok := prefs.(LanguageSubscriber); ok && sub != nil {
+		ch, _ := sub.Subscribe()
+		go func() {
+			var last i18n.LanguageCode
+			for p := range ch {
+				if p.Language == "" || p.Language == last {
+					continue
+				}
+				last = p.Language
+				s.retitleAll()
+			}
+		}()
+	}
 	s.settings = app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:                "settings",
 		Title:               s.title("window.title.settings"),
 		Width:               900,
-		Height:              640,
+		Height:              WindowHeight,
 		Hidden:              true,
 		DisableResize:       true,
 		MinimiseButtonState: application.ButtonHidden,
@@ -217,31 +242,6 @@ func NewWindowManager(app *application.App, mainWindow *application.WebviewWindo
 	return s
 }
 
-// WatchLanguage subscribes to UI preference changes and re-applies the
-// localised title to every live auxiliary window whenever the language
-// flips. The eagerly-created Settings window outlives its first paint, so
-// without this its title would stay frozen in the language it was created
-// in; the on-demand dialog windows (BrowserLogin, Session*, InstallProgress)
-// can also coexist with a Settings-driven language change. Safe to call
-// once at startup; subsequent calls overwrite the previous subscription.
-// No-op when sub is nil.
-func (s *WindowManager) WatchLanguage(sub LanguageSubscriber) {
-	if sub == nil {
-		return
-	}
-	ch, _ := sub.Subscribe()
-	go func() {
-		var last i18n.LanguageCode
-		for p := range ch {
-			if p.Language == "" || p.Language == last {
-				continue
-			}
-			last = p.Language
-			s.retitleAll()
-		}
-	}()
-}
-
 // retitleAll re-applies the localised title to every currently-alive
 // auxiliary window. Reads the window pointers under s.mu so a concurrent
 // Open*/Close* can't observe a torn slice. SetTitle itself dispatches to
@@ -258,6 +258,7 @@ func (s *WindowManager) retitleAll() {
 		{s.sessionExpired, "window.title.sessionExpired"},
 		{s.sessionAboutToExpire, "window.title.sessionExpiring"},
 		{s.installProgress, "window.title.updating"},
+		{s.welcome, "window.title.welcome"},
 	}
 	s.mu.Unlock()
 	for _, p := range wins {
@@ -524,4 +525,58 @@ func (s *WindowManager) CloseInstallProgress() {
 	if w != nil {
 		w.Close()
 	}
+}
+
+// OpenWelcome shows the first-launch onboarding window. The React side
+// auto-sizes the window height to its content; the Continue button calls
+// Preferences.SetOnboardingCompleted(true) before closing so the flow
+// doesn't re-run. Singleton, destroyed on close. Created Hidden so the
+// React side can auto-size before paint.
+func (s *WindowManager) OpenWelcome() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.welcome == nil {
+		opts := DialogWindowOptions("welcome", s.title("window.title.welcome"), "/#/dialog/welcome", s.linuxIcon)
+		opts.Width = 420
+		// Onboarding stays AlwaysOnTop (inherited from DialogWindowOptions)
+		// so the user can't accidentally bury the first-launch flow behind
+		// another window and lose track of how to finish setup.
+		// Land in the middle of the user's primary display — the welcome
+		// flow is identity-defining and shouldn't read as an incidental
+		// dialog floating in a corner. WindowCentered + nil Screen
+		// resolves against the primary display (see WebviewWindowOptions).
+		opts.InitialPosition = application.WindowCentered
+		s.welcome = s.app.Window.NewWithOptions(opts)
+		w := s.welcome
+		w.OnWindowEvent(events.Common.WindowClosing, func(_ *application.WindowEvent) {
+			s.mu.Lock()
+			s.welcome = nil
+			s.mu.Unlock()
+		})
+		return
+	}
+	s.welcome.Show()
+	s.welcome.Focus()
+}
+
+// CloseWelcome destroys the welcome window if open.
+func (s *WindowManager) CloseWelcome() {
+	s.mu.Lock()
+	w := s.welcome
+	s.welcome = nil
+	s.mu.Unlock()
+	if w != nil {
+		w.Close()
+	}
+}
+
+// OpenMain brings the main window forward. Used by the welcome Continue
+// button to hand off from onboarding to the regular UI without depending
+// on the tray.
+func (s *WindowManager) OpenMain() {
+	if s.mainWindow == nil {
+		return
+	}
+	s.mainWindow.Show()
+	s.mainWindow.Focus()
 }
