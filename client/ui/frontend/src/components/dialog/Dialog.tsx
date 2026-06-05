@@ -2,6 +2,7 @@ import { forwardRef, ComponentPropsWithoutRef, ElementRef, HTMLAttributes } from
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/cn";
 
 export const Root = DialogPrimitive.Root;
@@ -15,7 +16,7 @@ const Overlay = forwardRef<
             ref={ref}
             className={cn(
                 "fixed inset-0 z-50 grid items-center justify-items-center overflow-y-auto px-10 py-16",
-                "bg-black/40 backdrop-blur-sm",
+                "bg-black/60",
                 "data-[state=open]:animate-in data-[state=closed]:animate-out",
                 "data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0",
                 "duration-150 ease-out",
@@ -36,6 +37,7 @@ export const Content = forwardRef<ElementRef<typeof DialogPrimitive.Content>, Co
         { className, children, showClose = true, maxWidthClass = "max-w-md", ...props },
         ref,
     ) {
+        const { t } = useTranslation();
         return (
             <DialogPrimitive.Portal>
                 <Overlay>
@@ -67,7 +69,7 @@ export const Content = forwardRef<ElementRef<typeof DialogPrimitive.Content>, Co
                                     "text-nb-gray-300 hover:text-nb-gray-100",
                                     "focus:outline-none disabled:pointer-events-none",
                                 )}
-                                aria-label="Close"
+                                aria-label={t("common.close")}
                             >
                                 <X className="h-4 w-4" />
                             </DialogPrimitive.Close>
