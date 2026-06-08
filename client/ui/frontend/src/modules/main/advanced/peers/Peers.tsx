@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
-import { ChevronRightIcon, LaptopIcon } from "lucide-react";
+import { ChevronRightIcon, MonitorSmartphoneIcon } from "lucide-react";
 import type { PeerStatus } from "@bindings/services/models.js";
 import { cn } from "@/lib/cn";
 import { CopyToClipboard } from "@/components/CopyToClipboard";
 import { SearchInput } from "@/components/inputs/SearchInput";
 import { EmptyState } from "@/components/empty-state/EmptyState";
 import { NoResults } from "@/components/empty-state/NoResults";
-import { latencyColor } from "@/lib/formatters";
+import { latencyColor, shortenDns } from "@/lib/formatters";
 import { useStatus } from "@/contexts/StatusContext";
 import { usePeerDetail } from "@/contexts/PeerDetailContext";
 import { Tooltip } from "@/components/Tooltip";
@@ -136,19 +136,11 @@ export const Peers = () => {
 
     if (isConnected && peers.length === 0) {
         return (
-            <div
-                className={
-                    "flex-1 flex items-center justify-center px-6 pb-20 w-full h-full min-h-0"
-                }
-            >
-                <EmptyState
-                    icon={LaptopIcon}
-                    title={t("peers.empty.title")}
-                    description={t("peers.empty.description")}
-                    learnMoreUrl={"https://docs.netbird.io/how-to/getting-started"}
-                    learnMoreTopic={t("nav.peers.title")}
-                />
-            </div>
+            <EmptyState
+                icon={MonitorSmartphoneIcon}
+                title={t("peers.empty.title")}
+                description={t("peers.empty.description")}
+            />
         );
     }
 
@@ -217,7 +209,7 @@ const PeersList = ({ data }: { data: PeerStatus[] }) => {
                             <div>
                                 <CopyToClipboard message={peer.fqdn}>
                                     <TruncatedText
-                                        text={peer.fqdn}
+                                        text={shortenDns(peer.fqdn)}
                                         className={
                                             "block text-[0.81rem] font-medium text-nb-gray-100 truncate max-w-[300px]"
                                         }
