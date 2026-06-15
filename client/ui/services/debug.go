@@ -9,13 +9,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
+
+	"google.golang.org/protobuf/types/known/durationpb"
 
 	"github.com/netbirdio/netbird/client/proto"
 	"github.com/netbirdio/netbird/version"
 )
 
-// DebugBundleParams configures what the daemon collects when generating a
-// debug bundle.
 type DebugBundleParams struct {
 	Anonymize    bool   `json:"anonymize"`
 	SystemInfo   bool   `json:"systemInfo"`
@@ -23,22 +24,19 @@ type DebugBundleParams struct {
 	LogFileCount uint32 `json:"logFileCount"`
 }
 
-// DebugBundleResult mirrors DebugBundleResponse — Path is set on local-only
-// bundles, UploadedKey on successful uploads, UploadFailureReason on failed
-// uploads.
+// DebugBundleResult: Path is set for local-only bundles, UploadedKey on upload
+// success, UploadFailureReason on upload failure.
 type DebugBundleResult struct {
 	Path                string `json:"path"`
 	UploadedKey         string `json:"uploadedKey"`
 	UploadFailureReason string `json:"uploadFailureReason"`
 }
 
-// LogLevel is a single log-level value the daemon understands ("error",
-// "warn", "info", "debug", "trace").
+// LogLevel carries a logrus level name: "error", "warn", "info", "debug", "trace".
 type LogLevel struct {
 	Level string `json:"level"`
 }
 
-// Debug groups debug / log-level / packet-trace RPCs.
 type Debug struct {
 	conn DaemonConn
 }
@@ -81,9 +79,8 @@ func (s *Debug) GetLogLevel(ctx context.Context) (LogLevel, error) {
 	return LogLevel{Level: resp.GetLevel().String()}, nil
 }
 
-// RevealFile opens the OS file manager focused on the given path. Wails'
-// Browser.OpenURL refuses non-http(s) schemes, so the UI calls this binding
-// instead of constructing a file:// URL.
+// RevealFile opens the OS file manager focused on path. Needed because Wails'
+// Browser.OpenURL refuses non-http(s) schemes like file://.
 func (s *Debug) RevealFile(_ context.Context, path string) error {
 	if path == "" {
 		return fmt.Errorf("empty path")
@@ -100,10 +97,9 @@ func (s *Debug) RevealFile(_ context.Context, path string) error {
 	return cmd.Start()
 }
 
-// RegisterUILog tells the daemon the absolute path of the GUI's log file so
-// the daemon's debug bundle can collect it (the daemon runs as root and can't
-// resolve the user's config dir). Called by LogLevelWatcher on each daemon
-// (re)connect.
+// RegisterUILog reports the GUI log path to the daemon for bundle collection;
+// the daemon runs as root and can't resolve the user's config dir. Called on
+// each daemon (re)connect.
 func (s *Debug) RegisterUILog(ctx context.Context, path string) error {
 	cli, err := s.conn.Client()
 	if err != nil {
@@ -113,15 +109,36 @@ func (s *Debug) RegisterUILog(ctx context.Context, path string) error {
 	return err
 }
 
+func (s *Debug) StartBundleCapture(ctx context.Context, timeoutSeconds int32) error {
+	cli, err := s.conn.Client()
+	if err != nil {
+		return err
+	}
+	req := &proto.StartBundleCaptureRequest{}
+	if timeoutSeconds > 0 {
+		req.Timeout = durationpb.New(time.Duration(timeoutSeconds) * time.Second)
+	}
+	_, err = cli.StartBundleCapture(ctx, req)
+	return err
+}
+
+func (s *Debug) StopBundleCapture(ctx context.Context) error {
+	cli, err := s.conn.Client()
+	if err != nil {
+		return err
+	}
+	_, err = cli.StopBundleCapture(ctx, &proto.StopBundleCaptureRequest{})
+	return err
+}
+
 func (s *Debug) SetLogLevel(ctx context.Context, lvl LogLevel) error {
 	cli, err := s.conn.Client()
 	if err != nil {
 		return err
 	}
-	// proto.LogLevel_value keys are the enum names (TRACE/DEBUG/INFO/...), but
-	// callers (the React side, GetLogLevel) use the lowercase logrus names
-	// ("trace"/"debug"/...). Upper-case before the lookup so a lowercase level
-	// doesn't silently fall back to INFO.
+	// proto.LogLevel_value keys are upper-case enum names; callers pass
+	// lowercase logrus names. Upper-case before lookup or a valid level
+	// silently falls through to INFO.
 	level, ok := proto.LogLevel_value[strings.ToUpper(lvl.Level)]
 	if !ok {
 		level = int32(proto.LogLevel_INFO)
