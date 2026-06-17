@@ -143,6 +143,14 @@
         "message": "Quit NetBird",
         "description": "Tray menu item that fully exits the app and removes the tray icon. Keep short."
     },
+    "notify.daemonOutdated.title": {
+        "message": "NetBird service is outdated",
+        "description": "Title of the OS desktop notification shown when the running daemon is too old for this UI."
+    },
+    "notify.daemonOutdated.body": {
+        "message": "Update the NetBird service to use this app.",
+        "description": "Body of the desktop notification telling the user to upgrade the daemon."
+    },
     "notify.update.title": {
         "message": "NetBird update available",
         "description": "Title of the OS desktop notification shown when an app update is available."
@@ -1658,6 +1666,14 @@
     "daemon.unavailable.docsLink": {
         "message": "Documentation",
         "description": "Documentation link on the daemon-unavailable overlay."
+    },
+    "daemon.outdated.title": {
+        "message": "NetBird Service Is Outdated",
+        "description": "Title of the overlay shown when the NetBird background service is too old to drive this UI."
+    },
+    "daemon.outdated.description": {
+        "message": "Update the NetBird service to use this app.",
+        "description": "Body of the daemon-outdated overlay telling the user to upgrade the service."
     },
     "error.jwt_clock_skew": {
         "message": "Sign-in failed: this device's clock is out of sync with the server. Please sync your system clock and try again.",

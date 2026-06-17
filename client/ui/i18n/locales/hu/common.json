@@ -107,6 +107,12 @@
     "tray.menu.quit": {
         "message": "NetBird bezárása"
     },
+    "notify.daemonOutdated.title": {
+        "message": "A NetBird szolgáltatás elavult"
+    },
+    "notify.daemonOutdated.body": {
+        "message": "Frissítsd a NetBird szolgáltatást az alkalmazás használatához."
+    },
     "notify.update.title": {
         "message": "NetBird frissítés elérhető"
     },
@@ -1243,6 +1249,12 @@
     },
     "daemon.unavailable.docsLink": {
         "message": "Dokumentáció"
+    },
+    "daemon.outdated.title": {
+        "message": "A NetBird szolgáltatás elavult"
+    },
+    "daemon.outdated.description": {
+        "message": "Frissítsd a NetBird szolgáltatást az alkalmazás használatához."
     },
     "error.jwt_clock_skew": {
         "message": "A bejelentkezés sikertelen: az eszköz órája eltér a szerverétől. Kérjük, szinkronizálja a rendszer óráját, majd próbálja újra."

@@ -107,6 +107,12 @@
     "tray.menu.quit": {
         "message": "Выйти из NetBird"
     },
+    "notify.daemonOutdated.title": {
+        "message": "Служба NetBird устарела"
+    },
+    "notify.daemonOutdated.body": {
+        "message": "Обновите службу NetBird, чтобы использовать это приложение."
+    },
     "notify.update.title": {
         "message": "Доступно обновление NetBird"
     },
@@ -1243,6 +1249,12 @@
     },
     "daemon.unavailable.docsLink": {
         "message": "Документация"
+    },
+    "daemon.outdated.title": {
+        "message": "Служба NetBird устарела"
+    },
+    "daemon.outdated.description": {
+        "message": "Обновите службу NetBird, чтобы использовать это приложение."
     },
     "error.jwt_clock_skew": {
         "message": "Не удалось войти: часы этого устройства рассинхронизированы с сервером. Синхронизируйте системные часы и повторите попытку."

@@ -422,6 +422,16 @@ func (s *Server) SetConfig(callerCtx context.Context, msg *proto.SetConfigReques
 		return nil, fmt.Errorf("failed to update profile config: %w", err)
 	}
 
+	// Apply the lazy connection toggle to the running engine so it takes
+	// effect without a down/up. s.mutex is already held.
+	if msg.LazyConnectionEnabled != nil && s.connectClient != nil {
+		if engine := s.connectClient.Engine(); engine != nil {
+			if err := engine.SetLazyConnEnabled(msg.GetLazyConnectionEnabled()); err != nil {
+				log.Errorf("failed to apply lazy connection change at runtime: %v", err)
+			}
+		}
+	}
+
 	return &proto.SetConfigResponse{}, nil
 }
 
@@ -2119,6 +2129,12 @@ func (s *Server) GetFeatures(ctx context.Context, msg *proto.GetFeaturesRequest)
 	}
 
 	return features, nil
+}
+
+// WailsUIReady is a no-op the Wails UI probes at startup; merely answering it
+// (rather than returning Unimplemented) tells the UI this daemon is new enough.
+func (s *Server) WailsUIReady(context.Context, *proto.WailsUIReadyRequest) (*proto.WailsUIReadyResponse, error) {
+	return &proto.WailsUIReadyResponse{}, nil
 }
 
 // checkDisableAdvancedView reports the MDM-policy directive for the
