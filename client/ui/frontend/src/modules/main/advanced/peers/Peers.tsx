@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import * as ScrollArea from "@radix-ui/react-scroll-area";
-import { Virtuoso } from "react-virtuoso";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { ChevronRightIcon, MonitorSmartphoneIcon } from "lucide-react";
 import type { PeerStatus } from "@bindings/services/models.js";
 import { cn } from "@/lib/cn";
@@ -15,7 +15,7 @@ import { useStatus } from "@/contexts/StatusContext";
 import { usePeerDetail } from "@/contexts/PeerDetailContext";
 import { Tooltip } from "@/components/Tooltip";
 import { TruncatedText } from "@/components/TruncatedText";
-import { PeerFilters, StatusFilter } from "./PeerFilters";
+import { PeerFilters, type StatusFilter } from "./PeerFilters";
 
 const isOnline = (connStatus: string) => connStatus === "Connected";
 
@@ -54,7 +54,7 @@ export const Peers = () => {
     }, []);
 
     const isConnected = status?.status === "Connected";
-    const peers = status?.peers ?? [];
+    const peers = useMemo(() => status?.peers ?? [], [status?.peers]);
 
     const counts = useMemo<Record<StatusFilter, number>>(() => {
         const online = peers.filter((p) => isOnline(p.connStatus)).length;
@@ -120,9 +120,9 @@ export const Peers = () => {
     }
 
     return (
-        <div className={"flex flex-col w-full h-full min-h-0"}>
-            <div className={"flex items-center gap-2 px-6 py-2.5 border-b border-nb-gray-910"}>
-                <div className={"flex-1 min-w-0"}>
+        <div className={"flex h-full min-h-0 w-full flex-col"}>
+            <div className={"flex items-center gap-2 border-b border-nb-gray-910 px-6 py-2.5"}>
+                <div className={"min-w-0 flex-1"}>
                     <SearchInput
                         ref={searchRef}
                         placeholder={t("peers.search.placeholder")}
@@ -135,25 +135,20 @@ export const Peers = () => {
             {filtered.length === 0 ? (
                 <NoResults />
             ) : (
-                <ScrollArea.Root type={"auto"} className={"flex-1 min-h-0 overflow-hidden"}>
-                    <ScrollArea.Viewport
-                        ref={setScrollParent}
-                        className={"h-full w-full"}
-                    >
-                        {scrollParent && (
-                            <PeersList data={filtered} scrollParent={scrollParent} />
-                        )}
+                <ScrollArea.Root type={"auto"} className={"min-h-0 flex-1 overflow-hidden"}>
+                    <ScrollArea.Viewport ref={setScrollParent} className={"h-full w-full"}>
+                        {scrollParent && <PeersList data={filtered} scrollParent={scrollParent} />}
                     </ScrollArea.Viewport>
                     <ScrollArea.Scrollbar
                         orientation={"vertical"}
                         className={cn(
-                            "flex select-none touch-none transition-colors",
+                            "flex touch-none select-none transition-colors",
                             "w-1.5 bg-transparent py-1",
                         )}
                     >
                         <ScrollArea.Thumb
                             className={
-                                "flex-1 rounded-full bg-nb-gray-800 hover:bg-nb-gray-700 relative"
+                                "relative flex-1 rounded-full bg-nb-gray-800 hover:bg-nb-gray-700"
                             }
                         />
                     </ScrollArea.Scrollbar>
@@ -171,89 +166,188 @@ type PeersListProps = {
 };
 
 const PeersList = ({ data, scrollParent }: PeersListProps) => {
-    const { t } = useTranslation();
     const { setSelected } = usePeerDetail();
+    const virtuosoRef = useRef<VirtuosoHandle>(null);
+    const rowRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+
+    const focusRow = (index: number) => {
+        if (index < 0 || index >= data.length) return;
+        const peer = data[index];
+        const tryFocus = () => {
+            const el = rowRefs.current.get(peer.pubKey);
+            if (el) {
+                el.focus();
+                return true;
+            }
+            return false;
+        };
+        if (!tryFocus()) {
+            virtuosoRef.current?.scrollToIndex({ index, behavior: "auto" });
+            // Row may not be mounted yet — retry after Virtuoso renders it.
+            requestAnimationFrame(() => {
+                if (!tryFocus()) requestAnimationFrame(tryFocus);
+            });
+        }
+    };
+
+    const handleRowKeyDown = (e: KeyboardEvent<Element>, index: number) => {
+        switch (e.key) {
+            case "ArrowDown":
+                e.preventDefault();
+                focusRow(Math.min(index + 1, data.length - 1));
+                break;
+            case "ArrowUp":
+                e.preventDefault();
+                focusRow(Math.max(index - 1, 0));
+                break;
+            case "ArrowRight":
+                e.preventDefault();
+                setSelected(data[index]);
+                break;
+            case "Home":
+                e.preventDefault();
+                focusRow(0);
+                break;
+            case "End":
+                e.preventDefault();
+                focusRow(data.length - 1);
+                break;
+        }
+    };
+
+    const setRowRef = (pubKey: string, el: HTMLButtonElement | null) => {
+        if (el) rowRefs.current.set(pubKey, el);
+        else rowRefs.current.delete(pubKey);
+    };
+
+    const ctx = useMemo<PeerRowContext>(
+        () => ({ onKeyDown: handleRowKeyDown, onSelect: setSelected, setRowRef }),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [data, setSelected],
+    );
 
     return (
-        <Virtuoso
+        <Virtuoso<PeerStatus, PeerRowContext>
+            ref={virtuosoRef}
             data={data}
             customScrollParent={scrollParent}
             increaseViewportBy={400}
             computeItemKey={(_, peer) => peer.pubKey}
             components={{ Header: ListTopSpacer }}
-            itemContent={(_, peer) => {
-                const isConnected = peer.connStatus === "Connected";
-                return (
-                    <div
-                        className={cn(
-                            "group relative flex items-start gap-2.5 pl-6 pr-4 py-3 min-w-0",
-                            "hover:bg-nb-gray-900/40 transition-colors",
-                            "wails-no-draggable",
-                        )}
-                    >
-                        <button
-                            type={"button"}
-                            aria-label={shortenDns(peer.fqdn)}
-                            onClick={() => setSelected(peer)}
-                            className={"absolute inset-0 cursor-default"}
-                        />
-                        <Tooltip content={t(peerStatusLabelKey(peer.connStatus))} side={"left"}>
-                            <span
-                                className={cn(
-                                    "h-2 w-2 rounded-full shrink-0 mt-2 relative",
-                                    dotClass(peer.connStatus),
-                                )}
-                            />
-                        </Tooltip>
-                        <div
-                            className={
-                                "min-w-0 flex-1 flex flex-col leading-tight relative pointer-events-none"
-                            }
-                        >
-                            <div>
-                                <CopyToClipboard
-                                    message={peer.fqdn}
-                                    className={"pointer-events-auto"}
-                                >
-                                    <TruncatedText
-                                        text={shortenDns(peer.fqdn)}
-                                        className={
-                                            "block text-[0.81rem] font-medium text-nb-gray-100 truncate max-w-[300px]"
-                                        }
-                                    />
-                                </CopyToClipboard>
-                            </div>
-                            <div>
-                                <CopyToClipboard
-                                    message={peer.ip}
-                                    className={"pointer-events-auto"}
-                                >
-                                    <span className={"text-xs font-mono text-nb-gray-400 truncate"}>
-                                        {peer.ip}
-                                    </span>
-                                </CopyToClipboard>
-                            </div>
-                        </div>
-                        {isConnected && peer.latencyMs > 0 && (
-                            <span
-                                className={cn(
-                                    "shrink-0 self-center text-xs tabular-nums relative pointer-events-none",
-                                    latencyColor(peer.latencyMs),
-                                )}
-                            >
-                                {peer.latencyMs} ms
-                            </span>
-                        )}
-                        <ChevronRightIcon
-                            size={16}
-                            className={cn(
-                                "shrink-0 self-center text-nb-gray-300 relative pointer-events-none",
-                                "opacity-0 group-hover:opacity-100 transition-opacity",
-                            )}
-                        />
-                    </div>
-                );
-            }}
+            context={ctx}
+            itemContent={renderPeerRow}
         />
+    );
+};
+
+type PeerRowContext = {
+    onKeyDown: (e: KeyboardEvent<Element>, index: number) => void;
+    onSelect: (peer: PeerStatus) => void;
+    setRowRef: (pubKey: string, el: HTMLButtonElement | null) => void;
+};
+
+const renderPeerRow = (index: number, peer: PeerStatus, ctx: PeerRowContext): ReactNode => (
+    <PeerRow
+        peer={peer}
+        index={index}
+        onKeyDown={ctx.onKeyDown}
+        onSelect={ctx.onSelect}
+        setRowRef={ctx.setRowRef}
+    />
+);
+
+type PeerRowProps = {
+    peer: PeerStatus;
+    index: number;
+    onKeyDown: (e: KeyboardEvent<Element>, index: number) => void;
+    onSelect: (peer: PeerStatus) => void;
+    setRowRef: (pubKey: string, el: HTMLButtonElement | null) => void;
+};
+
+const PeerRow = ({ peer, index, onKeyDown, onSelect, setRowRef }: PeerRowProps) => {
+    const { t } = useTranslation();
+    const isConnected = peer.connStatus === "Connected";
+    const peerName = shortenDns(peer.fqdn) || peer.ip;
+    const statusLabel = t(peerStatusLabelKey(peer.connStatus));
+    const handleKey = (e: KeyboardEvent<Element>) => onKeyDown(e, index);
+    return (
+        <div
+            className={cn(
+                "group relative flex min-w-0 items-start gap-2.5 py-3 pl-6 pr-4",
+                "transition-colors hover:bg-nb-gray-900/40",
+                "wails-no-draggable",
+            )}
+        >
+            <button
+                type={"button"}
+                tabIndex={0}
+                ref={(el) => setRowRef(peer.pubKey, el)}
+                aria-label={t("peers.row.label", { name: peerName, status: statusLabel })}
+                onClick={() => onSelect(peer)}
+                onKeyDown={handleKey}
+                className={cn(
+                    "absolute inset-0 cursor-default outline-none",
+                    "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/60",
+                )}
+            />
+            <Tooltip content={statusLabel} side={"left"}>
+                <span
+                    aria-hidden={"true"}
+                    className={cn(
+                        "relative mt-2 h-2 w-2 shrink-0 rounded-full",
+                        dotClass(peer.connStatus),
+                    )}
+                />
+            </Tooltip>
+            <div
+                className={
+                    "pointer-events-none relative flex min-w-0 flex-1 flex-col leading-tight"
+                }
+            >
+                <div>
+                    <CopyToClipboard
+                        message={peer.fqdn}
+                        className={"pointer-events-auto"}
+                        onKeyDown={handleKey}
+                    >
+                        <TruncatedText
+                            text={shortenDns(peer.fqdn)}
+                            className={
+                                "block max-w-[300px] truncate text-[0.81rem] font-medium text-nb-gray-100"
+                            }
+                        />
+                    </CopyToClipboard>
+                </div>
+                <div>
+                    <CopyToClipboard
+                        message={peer.ip}
+                        className={"pointer-events-auto"}
+                        onKeyDown={handleKey}
+                    >
+                        <span className={"truncate font-mono text-xs text-nb-gray-400"}>
+                            {peer.ip}
+                        </span>
+                    </CopyToClipboard>
+                </div>
+            </div>
+            {isConnected && peer.latencyMs > 0 && (
+                <span
+                    className={cn(
+                        "pointer-events-none relative shrink-0 self-center text-xs tabular-nums",
+                        latencyColor(peer.latencyMs),
+                    )}
+                >
+                    {peer.latencyMs} ms
+                </span>
+            )}
+            <ChevronRightIcon
+                size={16}
+                aria-hidden={"true"}
+                className={cn(
+                    "pointer-events-none relative shrink-0 self-center text-nb-gray-300",
+                    "opacity-0 transition-opacity group-hover:opacity-100",
+                )}
+            />
+        </div>
     );
 };

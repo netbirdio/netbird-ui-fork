@@ -1,7 +1,7 @@
 "use client";
 
 import * as SwitchPrimitives from "@radix-ui/react-switch";
-import { cva, VariantProps } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 import { cn } from "@/lib/cn";
 
@@ -35,9 +35,10 @@ const switchVariants = cva("", {
             ],
         },
         "thumb-size": {
-            default: "h-5 w-5 data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-5",
-            small: "h-[14px] w-[14px] data-[state=unchecked]:translate-x-0 data-[state=checked]:translate-x-[17px]",
-            large: "h-[30px] w-[30px] data-[state=unchecked]:translate-x-[1px] data-[state=checked]:translate-x-[31px]",
+            default:
+                "h-5 w-5 data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0",
+            small: "h-[14px] w-[14px] data-[state=checked]:translate-x-[17px] data-[state=unchecked]:translate-x-0",
+            large: "h-[30px] w-[30px] data-[state=checked]:translate-x-[31px] data-[state=unchecked]:translate-x-[1px]",
         },
     },
 });
@@ -46,10 +47,12 @@ const ToggleSwitch = React.forwardRef<
     React.ElementRef<typeof SwitchPrimitives.Root>,
     React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> &
         SwitchVariants & { dataCy?: string }
->(({ className, size = "default", variant = "default", dataCy, ...props }, ref) => (
+>(({ className, size = "default", variant = "default", dataCy, disabled, ...props }, ref) => (
     <SwitchPrimitives.Root
+        disabled={disabled}
+        tabIndex={disabled ? -1 : 0}
         className={cn(
-            "wails-no-draggable peer inline-flex shrink-0 cursor-default items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-950 focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-neutral-300 dark:focus-visible:ring-offset-neutral-950",
+            "wails-no-draggable peer inline-flex shrink-0 cursor-default items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-nb-gray-940 disabled:cursor-not-allowed disabled:opacity-50",
             className,
             switchVariants({ size, variant }),
         )}

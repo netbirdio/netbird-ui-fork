@@ -16,6 +16,7 @@ import { CopyToClipboard } from "@/components/CopyToClipboard";
 import { TruncatedText } from "@/components/TruncatedText";
 import { shortenDns } from "@/lib/formatters";
 import { contentTop } from "@/components/empty-state/EmptyState";
+import { useFocusVisible } from "@/hooks/useFocusVisible";
 import { Check as CheckIcon, ChevronDownIcon, Copy as CopyIcon } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";
 import netbirdFullLogo from "@/assets/logos/netbird-full.svg";
@@ -220,13 +221,13 @@ export const MainConnectionStatusSwitch = () => {
 
     return (
         <div
-            className={cn("flex flex-col h-full w-full items-center gap-4", "relative")}
+            className={cn("flex h-full w-full flex-col items-center gap-4", "relative")}
             style={{ top: contentTop("11.7rem") }}
         >
             <img
                 src={netbirdFullLogo}
                 alt={"NetBird"}
-                className={"h-7 w-auto select-none mb-4 wails-no-draggable"}
+                className={"wails-no-draggable mb-4 h-7 w-auto select-none"}
                 draggable={false}
             />
 
@@ -235,31 +236,38 @@ export const MainConnectionStatusSwitch = () => {
                 checked={isOn}
                 onCheckedChange={handleSwitch}
                 disabled={(isTransitioning && !canForceCancel) || unreachable}
+                aria-label={t("connect.toggle.label")}
+                aria-describedby={"nb-connection-status"}
+                aria-busy={isTransitioning}
                 className={cn(unreachable && "opacity-80", isTransitioning && "animate-pulse")}
             />
 
             <div className={"flex flex-col items-center"}>
-                <h1
+                <p
+                    id={"nb-connection-status"}
+                    role={"status"}
+                    aria-live={"polite"}
                     className={
-                        "text-sm font-medium text-nb-gray-200 tracking-wide transition-colors duration-300 select-none wails-no-draggable mb-1"
+                        "wails-no-draggable mb-1 select-none text-sm font-medium tracking-wide text-nb-gray-200 transition-colors duration-300"
                     }
                 >
                     {t(STATUS_KEY[connState])}
-                </h1>
+                </p>
                 <CopyToClipboard
                     message={fqdn}
                     variant={"bright"}
                     iconClassName={"-top-px"}
+                    tabIndex={show && fqdn ? 0 : -1}
                     className={cn(
-                        "min-h-[1em] transition-opacity duration-300 max-w-full",
+                        "mt-1 max-h-[1em] min-h-[1em] max-w-full transition-opacity duration-300",
                         "relative left-[0.55rem]",
-                        show && fqdn ? "opacity-100" : "opacity-0 pointer-events-none",
+                        show && fqdn ? "opacity-100" : "pointer-events-none opacity-0",
                     )}
                 >
                     <TruncatedText
                         text={shortenDns(fqdn) || " "}
                         className={
-                            "block font-mono text-[0.8rem] leading-tight text-nb-gray-300 truncate max-w-[310px]"
+                            "block h-[18px] max-w-[310px] truncate font-mono text-[0.8rem] leading-tight text-nb-gray-300"
                         }
                     />
                 </CopyToClipboard>
@@ -270,7 +278,9 @@ export const MainConnectionStatusSwitch = () => {
 };
 
 const LocalIpLine = ({ ip, ipv6, show }: { ip: string; ipv6: string; show: boolean }) => {
+    const { t } = useTranslation();
     const [open, setOpen] = useState(false);
+    const isFocusVisible = useFocusVisible();
     const hasV6 = !!ipv6;
 
     if (!hasV6) {
@@ -278,10 +288,11 @@ const LocalIpLine = ({ ip, ipv6, show }: { ip: string; ipv6: string; show: boole
             <CopyToClipboard
                 message={ip}
                 variant={"bright"}
+                tabIndex={show && ip ? 0 : -1}
                 className={cn(
-                    "min-h-[1em] transition-opacity duration-300",
+                    "mt-1 max-h-[1em] min-h-[1em] transition-opacity duration-300",
                     "relative left-[0.55rem]",
-                    show && ip ? "opacity-100" : "opacity-0 pointer-events-none",
+                    show && ip ? "opacity-100" : "pointer-events-none opacity-0",
                 )}
             >
                 <span className={"font-mono text-[0.8rem] leading-tight text-nb-gray-300"}>
@@ -294,17 +305,23 @@ const LocalIpLine = ({ ip, ipv6, show }: { ip: string; ipv6: string; show: boole
     return (
         <div
             className={cn(
-                "min-h-[1em] transition-opacity duration-300 max-w-full",
-                "relative wails-no-draggable",
-                show && ip ? "opacity-100" : "opacity-0 pointer-events-none",
+                "min-h-[1em] max-w-full transition-opacity duration-300",
+                "wails-no-draggable relative",
+                show && ip ? "opacity-100" : "pointer-events-none opacity-0",
             )}
         >
             <Popover.Root open={open} onOpenChange={setOpen}>
                 <Popover.Trigger asChild>
                     <button
                         type={"button"}
+                        tabIndex={show && ip ? 0 : -1}
+                        aria-label={t("connect.localIp.label")}
+                        aria-haspopup={"dialog"}
+                        aria-expanded={open}
                         className={cn(
-                            "group relative inline-flex items-center outline-none cursor-default",
+                            "group relative inline-flex cursor-default items-center rounded-sm outline-none",
+                            isFocusVisible &&
+                                "focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-nb-gray-940",
                             "transition-colors",
                         )}
                     >
@@ -319,6 +336,7 @@ const LocalIpLine = ({ ip, ipv6, show }: { ip: string; ipv6: string; show: boole
                         </span>
                         <ChevronDownIcon
                             size={14}
+                            aria-hidden={"true"}
                             className={cn(
                                 "absolute -right-5 top-1/2 -translate-y-1/2",
                                 "shrink-0 text-nb-gray-300 transition-colors",
@@ -337,7 +355,7 @@ const LocalIpLine = ({ ip, ipv6, show }: { ip: string; ipv6: string; show: boole
                         className={cn(
                             "z-50 min-w-64 max-w-[280px] overflow-hidden",
                             "rounded-lg border border-nb-gray-900 bg-nb-gray-935",
-                            "p-1 shadow-lg outline-none text-nb-gray-200",
+                            "p-1 text-nb-gray-200 shadow-lg outline-none",
                             "flex flex-col",
                         )}
                     >
@@ -352,7 +370,9 @@ const LocalIpLine = ({ ip, ipv6, show }: { ip: string; ipv6: string; show: boole
 };
 
 const IpRow = ({ value }: { value: string }) => {
+    const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
+    const isFocusVisible = useFocusVisible();
     const handleClick = async () => {
         if (!value) return;
         try {
@@ -367,15 +387,22 @@ const IpRow = ({ value }: { value: string }) => {
         <button
             type={"button"}
             onClick={handleClick}
+            tabIndex={0}
+            aria-label={`${t("common.copy")} ${value}`}
             className={cn(
                 "group/iprow relative flex items-center justify-between gap-3",
                 "rounded-md px-2 py-1.5 text-left",
                 "text-nb-gray-200 hover:bg-nb-gray-900 hover:text-nb-gray-50",
-                "transition-colors outline-none cursor-default",
+                "cursor-default outline-none transition-colors",
+                isFocusVisible &&
+                    "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white/60",
             )}
         >
-            <span className={"font-mono text-[0.75rem] truncate min-w-0"}>{value}</span>
-            <span className={"shrink-0 inline-flex items-center text-nb-gray-200"}>
+            <span className={"min-w-0 truncate font-mono text-[0.75rem]"}>{value}</span>
+            <span
+                aria-hidden={"true"}
+                className={"inline-flex shrink-0 items-center text-nb-gray-200"}
+            >
                 {copied ? <CheckIcon size={11} /> : <CopyIcon size={11} />}
             </span>
         </button>

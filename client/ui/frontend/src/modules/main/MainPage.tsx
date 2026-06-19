@@ -44,18 +44,18 @@ const MainBody = () => {
     const isAdvanced = viewMode === "advanced";
 
     return (
-        <div className={"wails-draggable flex flex-1 min-h-0"}>
+        <main className={"wails-draggable flex min-h-0 flex-1"}>
             {/* Windows narrower width compensates for the OS frame Wails counts differently than macOS.
                 See https://github.com/wailsapp/wails/issues/3260 */}
             <div
                 className={cn(
-                    "relative flex flex-col items-center shrink-0 ",
+                    "relative flex shrink-0 flex-col items-center",
                     isWindows() ? "w-[364px]" : "w-[380px]",
                 )}
             >
                 <MainConnectionStatusSwitch />
                 {!features.disableNetworks && (
-                    <div className={"absolute left-5 right-5 bottom-5 wails-no-draggable"}>
+                    <div className={"wails-no-draggable absolute bottom-5 left-5 right-5"}>
                         <MainExitNodeSwitcher />
                     </div>
                 )}
@@ -65,7 +65,7 @@ const MainBody = () => {
                     <AdvancedAppRightPanel />
                 </NavSectionProvider>
             )}
-        </div>
+        </main>
     );
 };
 
@@ -82,20 +82,30 @@ const AdvancedAppRightPanel = () => {
             className={"m-5 ml-0"}
         >
             <div
+                ref={(el) => {
+                    if (!el) return;
+                    if (isConnected) el.removeAttribute("inert");
+                    else el.setAttribute("inert", "");
+                }}
                 className={cn(
-                    "flex-1 min-h-0 min-w-0 flex flex-col",
+                    "flex min-h-0 min-w-0 flex-1 flex-col",
                     !isConnected && "pointer-events-none select-none",
                 )}
                 aria-hidden={!isConnected}
             >
                 <Navigation />
-                <div className={"flex-1 min-h-0 flex flex-col"}>
+                <div
+                    role={"tabpanel"}
+                    id={`nb-tabpanel-${section}`}
+                    aria-labelledby={`nb-tab-${section}`}
+                    className={"flex min-h-0 flex-1 flex-col"}
+                >
                     {section === "peers" && <Peers />}
                     {section === "networks" && <Networks />}
                 </div>
             </div>
             {!isConnected && (
-                <div className={"absolute inset-0 z-20 flex pointer-events-auto bg-nb-gray-940"}>
+                <div className={"pointer-events-auto absolute inset-0 z-20 flex bg-nb-gray-940"}>
                     <NotConnectedState />
                 </div>
             )}

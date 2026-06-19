@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/buttons/Button";
 import FancyToggleSwitch from "@/components/switches/FancyToggleSwitch";
@@ -21,6 +21,7 @@ export function SettingsGeneral() {
     const { mdm, features } = useRestrictions();
 
     const inputRef = useRef<HTMLInputElement>(null);
+    const managementUrlId = useId();
     const prevMode = useRef(mode);
     useEffect(() => {
         if (prevMode.current === ManagementMode.Cloud && mode === ManagementMode.SelfHosted) {
@@ -62,15 +63,18 @@ export function SettingsGeneral() {
                 <SectionGroup title={t("settings.general.section.connection")}>
                     <div>
                         <div className={"flex items-start gap-3"}>
-                            <div className={"flex-1 min-w-0"}>
-                                <Label as={"div"}>{t("settings.general.management.label")}</Label>
+                            <div className={"min-w-0 flex-1"}>
+                                <Label htmlFor={managementUrlId}>
+                                    {t("settings.general.management.label")}
+                                </Label>
                                 <HelpText>{t("settings.general.management.help")}</HelpText>
                             </div>
                             <ManagementServerSwitch value={mode} onChange={setMode} />
                         </div>
                         {mode === ManagementMode.SelfHosted && (
-                            <div className={"flex items-start gap-3 mt-2"}>
+                            <div className={"mt-2 flex items-start gap-3"}>
                                 <Input
+                                    id={managementUrlId}
                                     ref={inputRef}
                                     value={displayUrl}
                                     onChange={(e) => setUrl(e.target.value)}
@@ -86,9 +90,9 @@ export function SettingsGeneral() {
                                             : undefined
                                     }
                                     spellCheck={false}
-                                    autoComplete="off"
-                                    autoCorrect="off"
-                                    autoCapitalize="off"
+                                    autoComplete={"off"}
+                                    autoCorrect={"off"}
+                                    autoCapitalize={"off"}
                                 />
                                 <Button
                                     variant={"primary"}

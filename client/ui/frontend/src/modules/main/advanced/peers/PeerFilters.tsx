@@ -37,19 +37,22 @@ export const PeerFilters = ({ value, onChange, counts, disabled }: Props) => {
         <DropdownMenu open={open} onOpenChange={setOpen}>
             <DropdownMenuTrigger
                 disabled={disabled}
+                tabIndex={0}
+                aria-label={t("common.filter")}
                 className={cn(
-                    "inline-flex items-center gap-1.5 h-9 px-2 rounded-md",
+                    "inline-flex h-9 items-center gap-1.5 rounded-md px-2",
                     "text-sm text-nb-gray-200",
-                    "outline-none hover:bg-nb-gray-900 data-[state=open]:bg-nb-gray-900 transition-colors duration-150",
-                    "disabled:opacity-50 disabled:pointer-events-none",
+                    "outline-none transition-colors duration-150 hover:bg-nb-gray-900 data-[state=open]:bg-nb-gray-900",
+                    "focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-nb-gray-940",
+                    "disabled:pointer-events-none disabled:opacity-50",
                     "wails-no-draggable cursor-default",
                 )}
             >
-                <ListFilter size={14} className={"shrink-0"} />
+                <ListFilter size={14} aria-hidden={"true"} className={"shrink-0"} />
                 <span>
                     {active.label} <span className={"tabular-nums"}>({counts[active.value]})</span>
                 </span>
-                <ChevronDown size={14} className={"ml-0.5 shrink-0"} />
+                <ChevronDown size={14} aria-hidden={"true"} className={"ml-0.5 shrink-0"} />
             </DropdownMenuTrigger>
             <DropdownMenuContent align={"end"} className={"min-w-[10rem]"}>
                 {filters.map((f) => {
@@ -58,13 +61,18 @@ export const PeerFilters = ({ value, onChange, counts, disabled }: Props) => {
                         <DropdownMenuItem
                             key={f.value}
                             onClick={() => handleSelect(f.value)}
+                            role={"menuitemradio"}
+                            aria-checked={checked}
                             className={"gap-2"}
                         >
                             <span className={"flex-1 truncate"}>
                                 {f.label}{" "}
                                 <span className={"tabular-nums"}>({counts[f.value]})</span>
                             </span>
-                            <span className={"w-4 shrink-0 flex items-center justify-center"}>
+                            <span
+                                aria-hidden={"true"}
+                                className={"flex w-4 shrink-0 items-center justify-center"}
+                            >
                                 {checked && <CheckIcon size={14} className={"text-netbird"} />}
                             </span>
                         </DropdownMenuItem>

@@ -19,13 +19,13 @@ export const DaemonOutdatedOverlay = () => {
     return (
         <div
             className={
-                "fixed inset-0 z-[100] flex items-center justify-center bg-nb-gray-950 backdrop-blur-sm cursor-default select-none wails-draggable"
+                "wails-draggable fixed inset-0 z-[100] flex cursor-default select-none items-center justify-center bg-nb-gray-950 backdrop-blur-sm"
             }
         >
-            <div className={"flex flex-col items-center gap-5 px-8 max-w-lg text-center"}>
+            <div className={"flex max-w-lg flex-col items-center gap-5 px-8 text-center"}>
                 <div
                     className={
-                        "h-11 w-11 rounded-xl flex items-center justify-center bg-nb-gray-920 border border-nb-gray-900 text-amber-500"
+                        "flex h-11 w-11 items-center justify-center rounded-xl border border-nb-gray-900 bg-nb-gray-920 text-amber-500"
                     }
                 >
                     <AlertTriangleIcon size={20} />
@@ -35,9 +35,7 @@ export const DaemonOutdatedOverlay = () => {
                     <p className={"text-base font-medium text-nb-gray-50"}>
                         {t("daemon.outdated.title")}
                     </p>
-                    <p className={"text-sm text-nb-gray-300"}>
-                        {t("daemon.outdated.description")}
-                    </p>
+                    <p className={"text-sm text-nb-gray-300"}>{t("daemon.outdated.description")}</p>
                 </div>
 
                 <div className={"wails-no-draggable"}>

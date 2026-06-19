@@ -28,8 +28,8 @@ export const SettingsNavigation = () => {
     ) : undefined;
 
     return (
-        <div className={"flex flex-col w-52 shrink-0 items-center select-none"}>
-            <VerticalTabs.List>
+        <div className={"flex w-52 shrink-0 select-none flex-col items-center"}>
+            <VerticalTabs.List aria-label={t("settings.nav.label")}>
                 <VerticalTabs.Trigger
                     value={"general"}
                     icon={SlidersHorizontalIcon}

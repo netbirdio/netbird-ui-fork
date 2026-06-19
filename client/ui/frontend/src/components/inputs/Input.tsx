@@ -1,9 +1,9 @@
-import { cva, VariantProps } from "class-variance-authority";
+import { cva, type VariantProps } from "class-variance-authority";
 import { Check, ChevronDown, ChevronUp, Copy, Eye, EyeOff } from "lucide-react";
 import {
     forwardRef,
-    InputHTMLAttributes,
-    ReactNode,
+    type InputHTMLAttributes,
+    type ReactNode,
     useEffect,
     useId,
     useRef,
@@ -32,27 +32,27 @@ const inputVariants = cva("", {
     variants: {
         variant: {
             default: [
-                "dark:bg-nb-gray-900 dark:placeholder:text-neutral-400/70 placeholder:text-neutral-500 border-neutral-200 dark:border-nb-gray-700",
-                "ring-offset-neutral-200/20 dark:ring-offset-neutral-950/50 dark:focus-visible:ring-neutral-500/20 focus-visible:ring-neutral-300/10",
+                "border-neutral-200 placeholder:text-neutral-500 dark:border-nb-gray-700 dark:bg-nb-gray-900 dark:placeholder:text-neutral-400/70",
+                "ring-offset-neutral-200/20 focus-visible:ring-neutral-300/10 dark:ring-offset-neutral-950/50 dark:focus-visible:ring-neutral-500/20",
             ],
             darker: [
-                "dark:bg-nb-gray-920 dark:placeholder:text-neutral-400/70 placeholder:text-neutral-500 border-neutral-300 dark:border-nb-gray-800",
-                "ring-offset-neutral-200/20 dark:ring-offset-neutral-950/50 dark:focus-visible:ring-neutral-500/20 focus-visible:ring-neutral-300/10",
+                "border-neutral-300 placeholder:text-neutral-500 dark:border-nb-gray-800 dark:bg-nb-gray-920 dark:placeholder:text-neutral-400/70",
+                "ring-offset-neutral-200/20 focus-visible:ring-neutral-300/10 dark:ring-offset-neutral-950/50 dark:focus-visible:ring-neutral-500/20",
             ],
             error: [
-                "dark:bg-nb-gray-900 dark:placeholder:text-neutral-400/70 placeholder:text-neutral-500 border-neutral-200 dark:border-red-500 text-red-500",
-                "ring-offset-red-500/10 dark:ring-offset-red-500/10 dark:focus-visible:ring-red-500/10 focus-visible:ring-red-500/10",
+                "border-neutral-200 text-red-500 placeholder:text-neutral-500 dark:border-red-500 dark:bg-nb-gray-900 dark:placeholder:text-neutral-400/70",
+                "ring-offset-red-500/10 focus-visible:ring-red-500/10 dark:ring-offset-red-500/10 dark:focus-visible:ring-red-500/10",
             ],
             warning: [
-                "dark:bg-nb-gray-900 dark:placeholder:text-neutral-400/70 placeholder:text-neutral-500 border-neutral-200 dark:border-orange-400 text-orange-400",
-                "ring-offset-orange-400/10 dark:ring-offset-orange-400/10 dark:focus-visible:ring-orange-400/10 focus-visible:ring-orange-400/10",
+                "border-neutral-200 text-orange-400 placeholder:text-neutral-500 dark:border-orange-400 dark:bg-nb-gray-900 dark:placeholder:text-neutral-400/70",
+                "ring-offset-orange-400/10 focus-visible:ring-orange-400/10 dark:ring-offset-orange-400/10 dark:focus-visible:ring-orange-400/10",
             ],
         },
         prefixSuffixVariant: {
             default: [
-                "dark:bg-nb-gray-900 border-neutral-200 dark:border-nb-gray-700 text-nb-gray-300",
+                "border-neutral-200 text-nb-gray-300 dark:border-nb-gray-700 dark:bg-nb-gray-900",
             ],
-            error: ["dark:bg-nb-gray-900 border-red-500 text-nb-gray-300 text-red-500"],
+            error: ["border-red-500 text-nb-gray-300 text-red-500 dark:bg-nb-gray-900"],
         },
     },
 });
@@ -82,17 +82,17 @@ function buildInputClassName(
 ): string {
     return cn(
         inputVariants({ variant: opts.variant }),
-        "flex h-[40px] w-full rounded-md bg-white px-3 py-2 text-sm select-text",
-        "file:bg-transparent file:text-sm file:font-medium file:border-0",
+        "flex h-[40px] w-full select-text rounded-md bg-white px-3 py-2 text-sm",
+        "file:border-0 file:bg-transparent file:text-sm file:font-medium",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
         "disabled:cursor-not-allowed disabled:opacity-40",
-        opts.hasCustomPrefix && "!border-l-0 !rounded-l-none",
+        opts.hasCustomPrefix && "!rounded-l-none !border-l-0",
         opts.hasSuffix && "!pr-9",
         opts.hasIcon && "!pl-10",
         "border",
-        opts.readOnly && "!bg-nb-gray-910 text-nb-gray-350 !border-nb-gray-800",
+        opts.readOnly && "!border-nb-gray-800 !bg-nb-gray-910 text-nb-gray-350",
         opts.showStepper &&
-            "!rounded-r-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]",
+            "!rounded-r-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
         opts.className,
     );
 }
@@ -108,7 +108,7 @@ function InputAffix({
             className={cn(
                 inputVariants({ prefixSuffixVariant: error ? "error" : "default" }),
                 "flex h-[40px] w-auto rounded-l-md bg-white px-3 py-2 text-sm",
-                "border items-center whitespace-nowrap",
+                "items-center whitespace-nowrap border",
                 disabled && "opacity-40",
                 className,
             )}
@@ -122,7 +122,7 @@ function InputIconSlot({ icon, disabled }: Readonly<{ icon: ReactNode; disabled?
     return (
         <div
             className={cn(
-                "absolute left-0 top-0 h-full flex items-center text-xs dark:text-nb-gray-300 pl-3 leading-[0]",
+                "absolute left-0 top-0 flex h-full items-center pl-3 text-xs leading-[0] dark:text-nb-gray-300",
                 disabled && "opacity-40",
             )}
         >
@@ -138,7 +138,7 @@ function InputSuffixSlot({
     return (
         <div
             className={cn(
-                "absolute right-0 top-0 h-full flex items-center text-xs dark:text-nb-gray-300 pr-3 leading-[0] select-none pointer-events-none",
+                "pointer-events-none absolute right-0 top-0 flex h-full select-none items-center pr-3 text-xs leading-[0] dark:text-nb-gray-300",
                 disabled && "opacity-30",
             )}
         >
@@ -156,44 +156,52 @@ function NumberStepper({
     return (
         <div
             className={cn(
-                "flex flex-col h-[40px] shrink-0 overflow-hidden",
-                "border border-l-0 rounded-r-md",
+                "flex h-[40px] shrink-0 flex-col overflow-hidden",
+                "rounded-r-md border border-l-0",
                 "border-neutral-200 dark:border-nb-gray-700 dark:bg-nb-gray-900",
                 error && "dark:border-red-500",
-                disabled && "opacity-40 pointer-events-none",
+                disabled && "pointer-events-none opacity-40",
             )}
         >
             <button
-                type="button"
+                type={"button"}
                 tabIndex={-1}
                 aria-label={t("common.increase")}
                 onClick={() => onStep(1)}
-                className="flex-1 flex items-center justify-center w-9 hover:bg-nb-gray-800 transition-colors text-nb-gray-300 cursor-default"
+                className={
+                    "flex w-9 flex-1 cursor-default items-center justify-center text-nb-gray-300 transition-colors hover:bg-nb-gray-800"
+                }
             >
-                <ChevronUp size={12} />
+                <ChevronUp size={12} aria-hidden={"true"} />
             </button>
             <button
-                type="button"
+                type={"button"}
                 tabIndex={-1}
                 aria-label={t("common.decrease")}
                 onClick={() => onStep(-1)}
                 className={cn(
-                    "flex-1 flex items-center justify-center w-9 hover:bg-nb-gray-800 transition-colors text-nb-gray-300 cursor-default",
+                    "flex w-9 flex-1 cursor-default items-center justify-center text-nb-gray-300 transition-colors hover:bg-nb-gray-800",
                     "border-t border-neutral-200 dark:border-nb-gray-700",
                 )}
             >
-                <ChevronDown size={12} />
+                <ChevronDown size={12} aria-hidden={"true"} />
             </button>
         </div>
     );
 }
 
-function FieldMessage({ error, warning }: Readonly<{ error?: string; warning?: string }>) {
+function FieldMessage({
+    id,
+    error,
+    warning,
+}: Readonly<{ id?: string; error?: string; warning?: string }>) {
     if (!error && !warning) return null;
     return (
         <span
+            id={id}
+            role={error ? "alert" : "status"}
             className={cn(
-                "text-xs mt-2 inline-flex items-center gap-1",
+                "mt-2 inline-flex items-center gap-1 text-xs",
                 error ? "text-red-500" : "text-orange-400",
             )}
         >
@@ -230,7 +238,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     const isNumber = type === "number";
 
     const reactId = useId();
-    const inputId = id ?? (label ? `input-${reactId}` : undefined);
+    const fallbackId = `input-${reactId}`;
+    const inputId = id ?? (label ? fallbackId : undefined);
+    const messageId = error || warning ? `${inputId ?? fallbackId}-message` : undefined;
 
     const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     useEffect(
@@ -262,12 +272,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     const passwordToggle =
         isPasswordType && showPasswordToggle ? (
             <button
-                type="button"
+                type={"button"}
                 onClick={() => setShowPassword((s) => !s)}
-                className="hover:text-white transition-all pointer-events-auto"
+                className={"pointer-events-auto transition-all hover:text-white"}
                 aria-label={t("common.togglePasswordVisibility")}
+                aria-pressed={showPassword}
             >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                {showPassword ? (
+                    <EyeOff size={18} aria-hidden={"true"} />
+                ) : (
+                    <Eye size={18} aria-hidden={"true"} />
+                )}
             </button>
         ) : null;
 
@@ -286,12 +301,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
     const copyToggle = copy ? (
         <button
-            type="button"
+            type={"button"}
             onClick={onCopy}
-            className="hover:text-white transition-all pointer-events-auto"
+            className={"pointer-events-auto transition-all hover:text-white"}
             aria-label={t("common.copy")}
         >
-            {copied ? <Check size={16} /> : <Copy size={16} />}
+            {copied ? (
+                <Check size={16} aria-hidden={"true"} />
+            ) : (
+                <Copy size={16} aria-hidden={"true"} />
+            )}
         </button>
     ) : null;
 
@@ -311,9 +330,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     });
 
     return (
-        <div className="flex flex-col w-full min-w-0">
+        <div className={"flex w-full min-w-0 flex-col"}>
             {label && <Label htmlFor={inputId}>{label}</Label>}
-            <div className={cn("flex relative h-[40px] w-full", maxWidthClass)}>
+            <div className={cn("relative flex h-[40px] w-full", maxWidthClass)}>
                 {customPrefix && (
                     <InputAffix
                         content={customPrefix}
@@ -325,11 +344,17 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
 
                 {icon && <InputIconSlot icon={icon} disabled={props.disabled} />}
 
-                <div className="relative flex flex-grow min-w-0">
+                <div className={"relative flex min-w-0 flex-grow"}>
                     <input
                         id={inputId}
                         type={inputType}
                         ref={setRefs}
+                        aria-invalid={error ? true : undefined}
+                        aria-describedby={
+                            messageId
+                                ? [props["aria-describedby"], messageId].filter(Boolean).join(" ")
+                                : props["aria-describedby"]
+                        }
                         {...props}
                         className={inputClassName}
                     />
@@ -341,7 +366,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
                     <NumberStepper error={error} disabled={props.disabled} onStep={stepBy} />
                 )}
             </div>
-            <FieldMessage error={error} warning={warning} />
+            <FieldMessage id={messageId} error={error} warning={warning} />
         </div>
     );
 });

@@ -15,8 +15,8 @@ const menuItemVariants = cva("", {
     variants: {
         variant: {
             default:
-                "text-nb-gray-200 focus:bg-nb-gray-900 focus:text-nb-gray-50 data-[state=open]:bg-nb-gray-900 data-[state=open]:text-nb-gray-50",
-            danger: "text-red-500 focus:bg-red-900/20 focus:text-red-500",
+                "text-nb-gray-200 hover:bg-nb-gray-900 hover:text-nb-gray-50 focus-visible:bg-nb-gray-900 focus-visible:text-nb-gray-50 data-[state=open]:bg-nb-gray-900 data-[state=open]:text-nb-gray-50",
+            danger: "text-red-500 hover:bg-red-900/20 hover:text-red-500 focus-visible:bg-red-900/20 focus-visible:text-red-500",
         },
     },
     defaultVariants: { variant: "default" },
@@ -32,7 +32,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
     <DropdownMenuPrimitive.SubTrigger
         ref={ref}
         className={cn(
-            "relative flex select-none items-center rounded-md pl-3 pr-2 py-1.5 text-sm outline-none cursor-default",
+            "relative flex cursor-default select-none items-center rounded-md py-1.5 pl-3 pr-2 text-sm outline-none",
             "transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
             inset && "pl-8",
             menuItemVariants({ variant }),
@@ -41,7 +41,7 @@ const DropdownMenuSubTrigger = React.forwardRef<
         {...props}
     >
         {children}
-        <ChevronRight className="ml-auto h-4 w-4" />
+        <ChevronRight className={"ml-auto h-4 w-4"} aria-hidden={"true"} />
     </DropdownMenuPrimitive.SubTrigger>
 ));
 DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayName;
@@ -102,7 +102,7 @@ const DropdownMenuItem = React.forwardRef<
     <DropdownMenuPrimitive.Item
         ref={ref}
         className={cn(
-            "relative flex select-none items-center rounded-md pl-2 pr-2 py-1.5 text-sm outline-none cursor-default",
+            "relative flex cursor-default select-none items-center rounded-md py-1.5 pl-2 pr-2 text-sm outline-none",
             "transition-colors data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
             inset && "pl-8",
             menuItemVariants({ variant }),
@@ -117,7 +117,7 @@ const DropdownMenuItem = React.forwardRef<
         {...props}
     >
         {href ? (
-            <a href={href} target={target} rel={rel} className="flex w-full items-center gap-3">
+            <a href={href} target={target} rel={rel} className={"flex w-full items-center gap-3"}>
                 {children}
             </a>
         ) : (
@@ -135,16 +135,16 @@ const DropdownMenuCheckboxItem = React.forwardRef<
         ref={ref}
         className={cn(
             "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none",
-            "transition-colors text-nb-gray-200 focus:bg-nb-gray-900 focus:text-nb-gray-50",
+            "text-nb-gray-200 transition-colors hover:bg-nb-gray-900 hover:text-nb-gray-50 focus-visible:bg-nb-gray-900 focus-visible:text-nb-gray-50",
             "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
             className,
         )}
         checked={checked}
         {...props}
     >
-        <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <span className={"absolute left-2 flex h-3.5 w-3.5 items-center justify-center"}>
             <DropdownMenuPrimitive.ItemIndicator>
-                <Check className="h-4 w-4" />
+                <Check className={"h-4 w-4"} />
             </DropdownMenuPrimitive.ItemIndicator>
         </span>
         {children}
@@ -160,15 +160,15 @@ const DropdownMenuRadioItem = React.forwardRef<
         ref={ref}
         className={cn(
             "relative flex cursor-default select-none items-center rounded-sm py-1.5 pl-8 pr-2 text-sm outline-none",
-            "transition-colors text-nb-gray-200 focus:bg-nb-gray-900 focus:text-nb-gray-50",
+            "text-nb-gray-200 transition-colors hover:bg-nb-gray-900 hover:text-nb-gray-50 focus-visible:bg-nb-gray-900 focus-visible:text-nb-gray-50",
             "data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
             className,
         )}
         {...props}
     >
-        <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center">
+        <span className={"absolute left-2 flex h-3.5 w-3.5 items-center justify-center"}>
             <DropdownMenuPrimitive.ItemIndicator>
-                <Circle className="h-2 w-2 fill-current" />
+                <Circle className={"h-2 w-2 fill-current"} />
             </DropdownMenuPrimitive.ItemIndicator>
         </span>
         {children}

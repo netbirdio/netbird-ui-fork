@@ -3,7 +3,7 @@ import { initReactI18next } from "react-i18next";
 import { Events } from "@wailsio/runtime";
 
 import { Preferences, I18n } from "@bindings/services";
-import { LanguageCode } from "@bindings/i18n/models.js";
+import { type LanguageCode } from "@bindings/i18n/models.js";
 
 // Relative path on purpose — alias globs (`@/…`) silently match nothing in some Vite dev setups.
 type BundleEntry = { message: string; description?: string };
@@ -77,6 +77,9 @@ export async function initI18n(): Promise<void> {
         returnNull: false,
     });
 
+    syncDocumentLang();
+    i18next.on("languageChanged", syncDocumentLang);
+
     Events.On("netbird:preferences:changed", (e) => {
         const next = e.data?.language;
         if (next && next !== i18next.language) {
@@ -85,6 +88,12 @@ export async function initI18n(): Promise<void> {
             });
         }
     });
+}
+
+function syncDocumentLang() {
+    if (typeof document !== "undefined") {
+        document.documentElement.lang = i18next.language;
+    }
 }
 
 export async function loadLanguages() {

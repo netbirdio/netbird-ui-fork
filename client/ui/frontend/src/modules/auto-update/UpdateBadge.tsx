@@ -18,7 +18,7 @@ export const UpdateBadge = forwardRef<HTMLDivElement, Props>(function UpdateBadg
         >
             <span
                 className={
-                    "animate-ping absolute inline-flex h-[15px] w-[15px] rounded-full bg-netbird opacity-20 pointer-events-none"
+                    "pointer-events-none absolute inline-flex h-[15px] w-[15px] animate-ping rounded-full bg-netbird opacity-20"
                 }
             />
             <ArrowUpCircleIcon size={size} className={"text-netbird"} />

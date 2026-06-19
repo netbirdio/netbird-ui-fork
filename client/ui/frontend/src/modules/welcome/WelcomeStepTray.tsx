@@ -29,13 +29,15 @@ export function WelcomeStepTray({ onContinue }: Readonly<WelcomeStepTrayProps>) 
                 <img
                     src={trayScreenshot}
                     alt={""}
-                    className={"w-full h-auto select-none pointer-events-none rounded-2xl"}
+                    className={"pointer-events-none h-auto w-full select-none rounded-2xl"}
                     draggable={false}
                 />
             </div>
 
-            <div className={"flex flex-col w-full gap-1"}>
-                <DialogHeading align={"left"}>{t("welcome.title")}</DialogHeading>
+            <div className={"flex w-full flex-col gap-1"}>
+                <DialogHeading id={"nb-welcome-title"} align={"left"}>
+                    {t("welcome.title")}
+                </DialogHeading>
                 <DialogDescription align={"left"}>{t("welcome.description")}</DialogDescription>
             </div>
 

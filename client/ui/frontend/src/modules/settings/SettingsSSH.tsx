@@ -6,12 +6,13 @@ import { Label } from "@/components/typography/Label";
 import { cn } from "@/lib/cn";
 import { SectionGroup } from "@/modules/settings/SettingsSection.tsx";
 import { useSettings } from "@/contexts/SettingsContext.tsx";
-import { type ChangeEvent, useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useId, useState } from "react";
 
 export function SettingsSSH() {
     const { t } = useTranslation();
     const { config, setField } = useSettings();
     const isSSHServerEnabled = config.serverSshAllowed;
+    const jwtTtlId = useId();
     const [jwtTtlInput, setJwtTtlInput] = useState(String(config.sshJwtCacheTtl));
 
     useEffect(() => {
@@ -92,16 +93,17 @@ export function SettingsSSH() {
                 />
                 <div
                     className={cn(
-                        "flex items-center gap-6 justify-between",
-                        config.disableSshAuth && "opacity-50 pointer-events-none",
+                        "flex items-center justify-between gap-6",
+                        config.disableSshAuth && "pointer-events-none opacity-50",
                     )}
                 >
-                    <div className={"flex-1 max-w-md"}>
-                        <Label as={"div"}>{t("settings.ssh.jwtTtl.label")}</Label>
+                    <div className={"max-w-md flex-1"}>
+                        <Label htmlFor={jwtTtlId}>{t("settings.ssh.jwtTtl.label")}</Label>
                         <HelpText margin={false}>{t("settings.ssh.jwtTtl.help")}</HelpText>
                     </div>
                     <div className={"w-40 shrink-0"}>
                         <Input
+                            id={jwtTtlId}
                             type={"number"}
                             min={0}
                             value={jwtTtlInput}

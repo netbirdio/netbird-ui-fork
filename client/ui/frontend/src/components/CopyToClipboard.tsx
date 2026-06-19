@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { Check, Copy } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -18,6 +19,9 @@ type CopyToClipboardProps = {
     iconClassName?: string;
     alwaysShowIcon?: boolean;
     variant?: CopyToClipboardVariant;
+    "aria-label"?: string;
+    tabIndex?: number;
+    onKeyDown?: (e: KeyboardEvent<HTMLButtonElement>) => void;
 };
 
 export const CopyToClipboard = ({
@@ -29,7 +33,11 @@ export const CopyToClipboard = ({
     iconClassName,
     alwaysShowIcon = false,
     variant = "default",
+    "aria-label": ariaLabel,
+    tabIndex = 0,
+    onKeyDown,
 }: CopyToClipboardProps) => {
+    const { t } = useTranslation();
     const wrapperRef = useRef<HTMLButtonElement>(null);
     const [copied, setCopied] = useState(false);
     const copyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -55,33 +63,43 @@ export const CopyToClipboard = ({
         }
     };
 
+    const resolvedLabel =
+        ariaLabel ?? (message ? `${t("common.copy")} ${message}` : t("common.copy"));
+
     return (
         <button
-            type="button"
+            type={"button"}
             ref={wrapperRef}
             onClick={handleClick}
+            onKeyDown={onKeyDown}
+            tabIndex={tabIndex}
+            aria-label={resolvedLabel}
+            aria-live={"polite"}
             className={cn(
-                "inline-flex gap-2 items-center group/copy cursor-default wails-no-draggable text-left pointer-events-auto",
+                "group/copy wails-no-draggable pointer-events-auto inline-flex cursor-default items-center gap-2 rounded-sm text-left outline-none",
+                "focus-visible:ring-2 focus-visible:ring-white/60 focus-visible:ring-offset-2 focus-visible:ring-offset-nb-gray-940",
                 className,
             )}
         >
             <span
                 className={cn(
-                    "relative truncate min-w-0",
+                    "relative min-w-0 truncate",
                     "[&_*]:transition-colors",
                     VARIANT_HOVER[variant],
                 )}
             >
                 {children}
                 <span
+                    aria-hidden={"true"}
                     className={
-                        "absolute bottom-0 left-0 right-0 border-b border-dashed border-transparent group-hover/copy:border-nb-gray-500 pointer-events-none"
+                        "pointer-events-none absolute bottom-0 left-0 right-0 border-b border-dashed border-transparent group-hover/copy:border-nb-gray-500"
                     }
                 />
             </span>
             <span
+                aria-hidden={"true"}
                 className={cn(
-                    "shrink-0 inline-flex relative top-[2px] right-[1px]",
+                    "relative right-[1px] top-[2px] inline-flex shrink-0",
                     iconAlignment === "left" ? "order-first" : "order-last",
                     iconClassName,
                 )}

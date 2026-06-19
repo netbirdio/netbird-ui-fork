@@ -75,18 +75,27 @@ export const MainHeader = () => {
                         icon={MoreVertical}
                         iconClassName={"text-nb-gray-200 wails-no-draggable"}
                         className={"select-none"}
+                        aria-label={t("header.menu.open")}
+                        aria-haspopup={"menu"}
+                        aria-expanded={menuOpen}
                     />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
-                    align="end"
+                    align={"end"}
                     sideOffset={8}
-                    className="min-w-52 select-none data-[state=closed]:!animate-none data-[state=closed]:!duration-0"
+                    className={
+                        "min-w-52 select-none data-[state=closed]:!animate-none data-[state=closed]:!duration-0"
+                    }
                 >
                     {updateAvailable && (
                         <>
                             <DropdownMenuItem onClick={openAbout}>
-                                <div className="flex items-center gap-2">
-                                    <ArrowUpCircleIcon size={14} className={"text-netbird"} />
+                                <div className={"flex items-center gap-2"}>
+                                    <ArrowUpCircleIcon
+                                        size={14}
+                                        className={"text-netbird"}
+                                        aria-hidden={"true"}
+                                    />
                                     <span className={"text-netbird"}>
                                         {t("header.menu.updateAvailable")}
                                     </span>
@@ -96,9 +105,9 @@ export const MainHeader = () => {
                         </>
                     )}
                     <DropdownMenuItem onClick={openSettings}>
-                        <div className="flex items-center gap-2 w-full">
-                            <Settings size={14} />
-                            <span className="flex-1">{t("header.menu.settings")}</span>
+                        <div className={"flex w-full items-center gap-2"}>
+                            <Settings size={14} aria-hidden={"true"} />
+                            <span className={"flex-1"}>{t("header.menu.settings")}</span>
                             <DropdownMenuShortcut>
                                 {formatShortcut(SETTINGS_SHORTCUT)}
                             </DropdownMenuShortcut>
@@ -125,13 +134,14 @@ export const MainHeader = () => {
             </DropdownMenu>
             {updateAvailable && (
                 <span
+                    aria-hidden={"true"}
                     className={
-                        "pointer-events-none absolute top-1.5 right-1.5 flex h-2.5 w-2.5 items-center justify-center"
+                        "pointer-events-none absolute right-1.5 top-1.5 flex h-2.5 w-2.5 items-center justify-center"
                     }
                 >
                     <span
                         className={
-                            "absolute inset-0 rounded-full bg-netbird opacity-60 animate-ping"
+                            "absolute inset-0 animate-ping rounded-full bg-netbird opacity-60"
                         }
                     />
                     <span className={"relative h-1.5 w-1.5 rounded-full bg-netbird"} />
@@ -141,26 +151,26 @@ export const MainHeader = () => {
     );
 
     return (
-        <div
+        <header
             className={cn(
-                "shrink-0 cursor-default wails-draggable relative z-10",
-                "flex items-center h-12 top-3",
+                "wails-draggable relative z-10 shrink-0 cursor-default",
+                "top-3 flex h-12 items-center",
             )}
         >
             {/* Windows narrower width compensates for the OS frame Wails counts differently than macOS.
                 See https://github.com/wailsapp/wails/issues/3260 */}
             <div
                 className={cn(
-                    "grid grid-cols-3 items-center shrink-0",
+                    "grid shrink-0 grid-cols-3 items-center",
                     isWindows() ? "w-[364px]" : "w-[380px]",
                 )}
             >
                 <div />
-                <div className={"flex justify-center ml-4"}>{profileSlot}</div>
+                <div className={"ml-4 flex justify-center"}>{profileSlot}</div>
                 <div />
             </div>
             <div className={"absolute right-[1.3rem] top-1/2 -translate-y-1/2"}>{settingsSlot}</div>
-        </div>
+        </header>
     );
 };
 
@@ -172,11 +182,11 @@ type ViewModeItemProps = {
 };
 
 const ViewModeItem = ({ icon: Icon, label, selected, onSelect }: ViewModeItemProps) => (
-    <DropdownMenuItem onClick={onSelect}>
-        <div className="flex items-center gap-2 w-full">
-            <Icon size={14} />
-            <span className="flex-1">{label}</span>
-            {selected && <Check size={14} className="text-netbird" />}
+    <DropdownMenuItem onClick={onSelect} role={"menuitemradio"} aria-checked={selected}>
+        <div className={"flex w-full items-center gap-2"}>
+            <Icon size={14} aria-hidden={"true"} />
+            <span className={"flex-1"}>{label}</span>
+            {selected && <Check size={14} className={"text-netbird"} aria-hidden={"true"} />}
         </div>
     </DropdownMenuItem>
 );
